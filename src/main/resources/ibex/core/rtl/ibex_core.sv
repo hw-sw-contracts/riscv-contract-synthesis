@@ -110,7 +110,14 @@ module ibex_core #(
     input  logic        fetch_enable_i,
     output logic        alert_minor_o,
     output logic        alert_major_o,
-    output logic        core_sleep_o
+    output logic        core_sleep_o,
+
+`ifdef CONTRACT
+    output logic        fetch_o,
+    output logic        retire_o,
+    output logic [31:0] retire_instr_o,
+    output logic [(2**(RV32E ? 4 : 5))-1:0][RegFileDataWidth-1:0] regfile_o,
+`endif
 );
 
   import ibex_pkg::*;
@@ -200,6 +207,9 @@ module ibex_core #(
   logic [31:0] rf_wdata_lsu;
   logic        rf_we_wb;
   logic        rf_we_lsu;
+`ifdef CONTRACT
+  logic [(2**(RV32E ? 4 : 5))-1:0][RegFileDataWidth-1:0] rf_regfile;
+`endif
 
   logic [4:0]  rf_waddr_id;
   logic [31:0] rf_wdata_id;
@@ -309,6 +319,9 @@ module ibex_core #(
   // used by performance counters and RVFI
   logic        instr_id_done;
   logic        instr_done_wb;
+`ifdef CONTRACT
+  logic [31:0] instr_done_rdata_wb;
+`endif
 
   logic        perf_instr_ret_wb;
   logic        perf_instr_ret_compressed_wb;
@@ -755,6 +768,9 @@ module ibex_core #(
     .en_wb_i                        ( en_wb                        ),
     .instr_type_wb_i                ( instr_type_wb                ),
     .pc_id_i                        ( pc_id                        ),
+`ifdef CONTRACT
+    .instr_rdata_id_i               ( instr_rdata_id               ),
+`endif
     .instr_is_compressed_id_i       ( instr_is_compressed_id       ),
     .instr_perf_count_id_i          ( instr_perf_count_id          ),
 
@@ -782,7 +798,10 @@ module ibex_core #(
     .lsu_resp_valid_i               ( lsu_resp_valid               ),
     .lsu_resp_err_i                 ( lsu_resp_err                 ),
 
-    .instr_done_wb_o                ( instr_done_wb                )
+    .instr_done_wb_o                ( instr_done_wb                ),
+`ifdef CONTRACT
+    .instr_done_rdata_wb_o          ( instr_done_rdata_wb          ),
+`endif
   );
 
   ///////////////////////
@@ -862,7 +881,10 @@ module ibex_core #(
         .rdata_b_o        ( rf_rdata_b_ecc  ),
         .waddr_a_i        ( rf_waddr_wb     ),
         .wdata_a_i        ( rf_wdata_wb_ecc ),
-        .we_a_i           ( rf_we_wb        )
+        .we_a_i           ( rf_we_wb        ),
+`ifdef CONTRACT
+        .regfile_o        ( rf_regfile      ),
+`endif
     );
   end else if (RegFile == RegFileFPGA) begin : gen_regfile_fpga
     ibex_register_file_fpga #(
@@ -1470,5 +1492,16 @@ module ibex_core #(
 
   // Certain parameter combinations are not supported
   `ASSERT_INIT(IllegalParamSecure, !(SecureIbex && (RV32M == RV32MNone)))
+
+`ifdef CONTRACT
+  logic granted = 0;
+  always @(posedge clk) begin
+    granted <= instr_gnt_i;
+  end
+  assign fetch_o = granted;
+  assign retire_o = instr_done_wb;
+  assign retire_instr_o = instr_done_rdata_wb;
+  assign regfile_o = rf_regfile;
+`endif
 
 endmodule

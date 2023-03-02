@@ -1,0 +1,44 @@
+[options]
+mode cover
+depth /* Number Steps */
+append 0
+multiclock on
+
+[engines]
+smtbmc z3
+
+[script]
+read -formal -sv ibex_csr.v ibex_counter.v ibex_fetch_fifo.v ibex_multdiv_fast.v ibex_multdiv_slow.v ibex_alu.v ibex_controller.v ibex_decoder.v ibex_branch_predict.v ibex_dummy_instr.v ibex_compressed_decoder.v ibex_prefetch_buffer.v ibex_icache.v ibex_pmp.v ibex_cs_registers.v ibex_register_file_ff.v ibex_load_store_unit.v ibex_wb_stage.v ibex_ex_block.v ibex_id_stage.v ibex_if_stage.v ibex_core.v data_mem.v instr_mem_2.v instr_mem_1.v atk.v ctr.v clk_sync.v control.v top.v
+prep -top top
+
+[files]
+ibex_csr.v
+ibex_counter.v
+ibex_fetch_fifo.v
+ibex_multdiv_fast.v
+ibex_multdiv_slow.v
+ibex_alu.v
+ibex_controller.v
+ibex_decoder.v
+ibex_branch_predict.v
+ibex_dummy_instr.v
+ibex_compressed_decoder.v
+ibex_prefetch_buffer.v
+ibex_icache.v
+ibex_pmp.v
+ibex_cs_registers.v
+ibex_register_file_ff.v
+ibex_load_store_unit.v
+ibex_wb_stage.v
+ibex_ex_block.v
+ibex_id_stage.v
+ibex_if_stage.v
+ibex_core.v
+data_mem.v
+instr_mem_2.v
+instr_mem_1.v
+atk.v
+ctr.v
+clk_sync.v
+control.v
+top.v

@@ -22,6 +22,9 @@ module ibex_wb_stage #(
   input  logic                     en_wb_i,
   input  ibex_pkg::wb_instr_type_e instr_type_wb_i,
   input  logic [31:0]              pc_id_i,
+`ifdef CONTRACT
+  input  logic [31:0]              instr_rdata_id_i,
+`endif
   input  logic                     instr_is_compressed_id_i,
   input  logic                     instr_perf_count_id_i,
 
@@ -49,7 +52,10 @@ module ibex_wb_stage #(
   input logic                      lsu_resp_valid_i,
   input logic                      lsu_resp_err_i,
 
-  output logic                     instr_done_wb_o
+  output logic                     instr_done_wb_o,
+`ifdef CONTRACT
+  output logic [31:0]              instr_done_rdata_wb_o,
+`endif  
 );
 
   import ibex_pkg::*;
@@ -68,6 +74,9 @@ module ibex_wb_stage #(
 
     logic           wb_valid_q;
     logic [31:0]    wb_pc_q;
+`ifdef CONTRACT
+    logic [31:0]    wb_instr_q;
+`endif
     logic           wb_compressed_q;
     logic           wb_count_q;
     wb_instr_type_e wb_instr_type_q;
@@ -98,6 +107,9 @@ module ibex_wb_stage #(
         rf_wdata_wb_q   <= rf_wdata_id_i;
         wb_instr_type_q <= instr_type_wb_i;
         wb_pc_q         <= pc_id_i;
+`ifdef CONTRACT
+        wb_instr_q      <= instr_rdata_id_i;
+`endif
         wb_compressed_q <= instr_is_compressed_id_i;
         wb_count_q      <= instr_perf_count_id_i;
       end
@@ -117,6 +129,7 @@ module ibex_wb_stage #(
     assign outstanding_store_wb_o = wb_valid_q & (wb_instr_type_q == WB_INSTR_STORE);
 
     assign pc_wb_o = wb_pc_q;
+    assign instr_done_rdata_wb_o = wb_instr_q;
 
     assign instr_done_wb_o = wb_valid_q & wb_done;
 

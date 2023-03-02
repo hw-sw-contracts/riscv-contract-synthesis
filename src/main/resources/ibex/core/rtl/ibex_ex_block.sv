@@ -189,6 +189,10 @@ module ibex_ex_block #(
         .valid_o            ( multdiv_valid         ),
         .multdiv_result_o   ( multdiv_result        )
     );
+  end else begin : gen_multdiv_none
+    // Fix warnings about uninitialized wires
+    assign multdiv_alu_operand_a = 33'b0;
+    assign multdiv_alu_operand_b = 33'b0;
   end
 
   // Multiplier/divider may require multiple cycles. The ALU output is valid in the same cycle

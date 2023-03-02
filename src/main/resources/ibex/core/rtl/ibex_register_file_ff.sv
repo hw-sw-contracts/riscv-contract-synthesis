@@ -34,8 +34,11 @@ module ibex_register_file_ff #(
     // Write port W1
     input  logic [4:0]           waddr_a_i,
     input  logic [DataWidth-1:0] wdata_a_i,
-    input  logic                 we_a_i
+    input  logic                 we_a_i,
 
+`ifdef CONTRACT
+    output logic [(2**(RV32E ? 4 : 5))-1:0][DataWidth-1:0] regfile_o,
+`endif
 );
 
   localparam int unsigned ADDR_WIDTH = RV32E ? 4 : 5;
@@ -98,5 +101,9 @@ module ibex_register_file_ff #(
   // Signal not used in FF register file
   logic unused_test_en;
   assign unused_test_en = test_en_i;
+
+`ifdef CONTRACT
+  assign regfile_o = rf_reg;
+`endif  
 
 endmodule
