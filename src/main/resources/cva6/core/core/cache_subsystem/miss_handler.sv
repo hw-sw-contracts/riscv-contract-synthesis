@@ -16,13 +16,14 @@
 // MISS Handler
 // --------------
 
+typedef ariane_axi::req_t axi_req_t;
+typedef ariane_axi::resp_t axi_rsp_t;
+
 module miss_handler import ariane_pkg::*; import std_cache_pkg::*; #(
     parameter int unsigned NR_PORTS       = 3,
     parameter int unsigned AXI_ADDR_WIDTH = 0,
     parameter int unsigned AXI_DATA_WIDTH = 0,
-    parameter int unsigned AXI_ID_WIDTH   = 0,
-    parameter type axi_req_t = ariane_axi::req_t,
-    parameter type axi_rsp_t = ariane_axi::resp_t
+    parameter int unsigned AXI_ID_WIDTH   = 0
 )(
     input  logic                                        clk_i,
     input  logic                                        rst_ni,
@@ -139,7 +140,15 @@ module miss_handler import ariane_pkg::*; import std_cache_pkg::*; #(
     // ------------------------------
     // Cache Management
     // ------------------------------
-    always_comb begin : cache_management
+    //always_comb begin : cache_management
+    always @(data_i[0].valid, data_i[1].valid, data_i[2].valid, data_i[3].valid, data_i[4].valid, data_i[5].valid, data_i[6].valid, data_i[7].valid,
+      data_i[0].dirty, data_i[1].dirty, data_i[2].dirty, data_i[3].dirty, data_i[4].dirty, data_i[5].dirty, data_i[6].dirty, data_i[7].dirty,
+      data_i[0].data, data_i[1].data, data_i[2].data, data_i[3].data, data_i[4].data, data_i[5].data, data_i[6].data, data_i[7].data,
+      data_i[0].tag, data_i[1].tag, data_i[2].tag, data_i[3].tag, data_i[4].tag, data_i[5].tag, data_i[6].tag, data_i[7].tag,
+      serve_amo_q,state_q, cnt_q, evict_way_q, evict_cl_q, mshr_q, amo_req_i.req, busy_i, flush_i,
+      miss_req_valid,miss_req_bypass, miss_req_we,miss_req_addr,miss_req_wdata,miss_req_be, lfsr_oh,valid_miss_fsm, evict_way_q,data_miss_fsm,
+      evict_cl_q,amo_req_i.amo_op,amo_req_i.operand_a,amo_req_i.size,amo_req_i.operand_b,amo_bypass_rsp.gnt,amo_bypass_rsp.valid,amo_bypass_rsp.rdata
+      ) begin : cache_management
         automatic logic [DCACHE_SET_ASSOC-1:0] evict_way, valid_way;
 
         for (int unsigned i = 0; i < DCACHE_SET_ASSOC; i++) begin
@@ -466,7 +475,7 @@ module miss_handler import ariane_pkg::*; import std_cache_pkg::*; #(
                 end
             end
         endcase
-    end
+    end : cache_management
 
     // check MSHR for aliasing
     always_comb begin
@@ -547,9 +556,7 @@ module miss_handler import ariane_pkg::*; import std_cache_pkg::*; #(
     // Arbitrate bypass ports
     // ----------------------
     axi_adapter_arbiter #(
-        .NR_PORTS(NR_BYPASS_PORTS),
-        .req_t   (bypass_req_t),
-        .rsp_t   (bypass_rsp_t)
+        .NR_PORTS(NR_BYPASS_PORTS)
     ) i_bypass_arbiter (
         .clk_i (clk_i),
         .rst_ni(rst_ni),
@@ -573,9 +580,7 @@ module miss_handler import ariane_pkg::*; import std_cache_pkg::*; #(
         .CACHELINE_BYTE_OFFSET ( DCACHE_BYTE_OFFSET ),
         .AXI_ADDR_WIDTH        ( AXI_ADDR_WIDTH     ),
         .AXI_DATA_WIDTH        ( AXI_DATA_WIDTH     ),
-        .AXI_ID_WIDTH          ( AXI_ID_WIDTH       ),
-        .axi_req_t             ( axi_req_t          ),
-        .axi_rsp_t             ( axi_rsp_t          )
+        .AXI_ID_WIDTH          ( AXI_ID_WIDTH       )
     ) i_bypass_axi_adapter (
         .clk_i                (clk_i),
         .rst_ni               (rst_ni),
@@ -610,9 +615,7 @@ module miss_handler import ariane_pkg::*; import std_cache_pkg::*; #(
         .CACHELINE_BYTE_OFFSET ( DCACHE_BYTE_OFFSET ),
         .AXI_ADDR_WIDTH        ( AXI_ADDR_WIDTH     ),
         .AXI_DATA_WIDTH        ( AXI_DATA_WIDTH     ),
-        .AXI_ID_WIDTH          ( AXI_ID_WIDTH       ),
-        .axi_req_t             ( axi_req_t          ),
-        .axi_rsp_t             ( axi_rsp_t          )
+        .AXI_ID_WIDTH          ( AXI_ID_WIDTH       )
     ) i_miss_axi_adapter (
         .clk_i,
         .rst_ni,
@@ -671,10 +674,12 @@ endmodule
 //
 // Description: Arbitrates access to AXI refill/bypass
 //
+
+typedef std_cache_pkg::bypass_req_t req_t;
+typedef std_cache_pkg::bypass_rsp_t rsp_t;
+
 module axi_adapter_arbiter #(
-    parameter NR_PORTS = 4,
-    parameter type req_t = std_cache_pkg::bypass_req_t,
-    parameter type rsp_t = std_cache_pkg::bypass_rsp_t
+    parameter NR_PORTS = 4
 )(
     input  logic                clk_i,  // Clock
     input  logic                rst_ni, // Asynchronous reset active low

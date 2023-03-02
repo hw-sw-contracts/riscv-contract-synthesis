@@ -12,21 +12,23 @@
 /// handshaking.
 
 module stream_mux #(
-  parameter type DATA_T = logic,  // Vivado requires a default value for type parameters.
+  parameter int unsigned DATA_T = 1,  // Vivado requires a default value for type parameters.
   parameter integer N_INP = 0,    // Synopsys DC requires a default value for value parameters.
   /// Dependent parameters, DO NOT OVERRIDE!
   parameter integer LOG_N_INP = $clog2(N_INP)
 ) (
-  input  DATA_T [N_INP-1:0]     inp_data_i,
-  input  logic  [N_INP-1:0]     inp_valid_i,
-  output logic  [N_INP-1:0]     inp_ready_o,
+  input  DATA_T_t [N_INP-1:0]     inp_data_i,
+  input  logic  [N_INP-1:0]                inp_valid_i,
+  output logic  [N_INP-1:0]                inp_ready_o,
 
-  input  logic  [LOG_N_INP-1:0] inp_sel_i,
+  input  logic  [LOG_N_INP-1:0]            inp_sel_i,
 
-  output DATA_T                 oup_data_o,
-  output logic                  oup_valid_o,
-  input  logic                  oup_ready_i
+  output DATA_T_t                 oup_data_o,
+  output logic                             oup_valid_o,
+  input  logic                             oup_ready_i
 );
+
+typedef logic [DATA_T:0] DATA_T_t;
 
   always_comb begin
     inp_ready_o = '0;

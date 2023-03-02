@@ -512,7 +512,7 @@ module fpu_wrap import ariane_pkg::*; (
     fpnew_top #(
       .Features       ( FPU_FEATURES              ),
       .Implementation ( FPU_IMPLEMENTATION        ),
-      .TagType        ( logic [TRANS_ID_BITS-1:0] )
+      .TagType        ( TRANS_ID_BITS - 1         )
     ) i_fpnew_bulk (
       .clk_i,
       .rst_ni,

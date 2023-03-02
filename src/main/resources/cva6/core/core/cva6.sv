@@ -22,17 +22,18 @@ import "DPI-C" function void dromajo_step(int     hart_id,
 import "DPI-C" function void init_dromajo(string cfg_f_name);
 `endif
 
+typedef ariane_axi::req_t axi_req_t;
+typedef ariane_axi::resp_t axi_rsp_t;
+typedef ariane_axi::ar_chan_t axi_ar_chan_t;
+typedef ariane_axi::aw_chan_t axi_aw_chan_t;
+typedef ariane_axi::w_chan_t axi_w_chan_t;
+
 
 module cva6 import ariane_pkg::*; #(
   parameter ariane_pkg::ariane_cfg_t ArianeCfg     = ariane_pkg::ArianeDefaultConfig,
   parameter int unsigned AxiAddrWidth = ariane_axi::AddrWidth,
   parameter int unsigned AxiDataWidth = ariane_axi::DataWidth,
-  parameter int unsigned AxiIdWidth   = ariane_axi::IdWidth,
-  parameter type axi_ar_chan_t = ariane_axi::ar_chan_t,
-  parameter type axi_aw_chan_t = ariane_axi::aw_chan_t,
-  parameter type axi_w_chan_t  = ariane_axi::w_chan_t,
-  parameter type axi_req_t = ariane_axi::req_t,
-  parameter type axi_rsp_t = ariane_axi::resp_t
+  parameter int unsigned AxiIdWidth   = ariane_axi::IdWidth
 ) (
   input  logic                         clk_i,
   input  logic                         rst_ni,
@@ -64,7 +65,11 @@ module cva6 import ariane_pkg::*; #(
 `else
   // memory side, AXI Master
   output axi_req_t                     axi_req_o,
-  input  axi_rsp_t                     axi_resp_i
+  input  axi_rsp_t                     axi_resp_i,
+`endif
+`ifdef CONTRACT
+  input logic enable_issue_i,
+  output logic issue_o,
 `endif
 );
 
@@ -288,6 +293,10 @@ module cva6 import ariane_pkg::*; #(
     .fetch_entry_o       ( fetch_entry_if_id             ),
     .fetch_entry_valid_o ( fetch_valid_if_id             ),
     .fetch_entry_ready_i ( fetch_ready_id_if             ),
+    `ifdef CONTRACT
+      .enable_issue_i    ( enable_issue_i                ),
+      .issue_o           ( issue_o                       ),
+    `endif
     .*
   );
 
@@ -685,9 +694,7 @@ module cva6 import ariane_pkg::*; #(
     .ArianeCfg            ( ArianeCfg ),
     .AxiAddrWidth         ( AxiAddrWidth ),
     .AxiDataWidth         ( AxiDataWidth ),
-    .AxiIdWidth           ( AxiIdWidth ),
-    .axi_req_t            ( axi_req_t ),
-    .axi_rsp_t            ( axi_rsp_t )
+    .AxiIdWidth           ( AxiIdWidth )
   ) i_cache_subsystem (
     // to D$
     .clk_i                 ( clk_i                       ),
@@ -732,12 +739,7 @@ module cva6 import ariane_pkg::*; #(
     .ArianeCfg             ( ArianeCfg                   ),
     .AxiAddrWidth          ( AxiAddrWidth                ),
     .AxiDataWidth          ( AxiDataWidth                ),
-    .AxiIdWidth            ( AxiIdWidth                  ),
-    .axi_ar_chan_t         ( axi_ar_chan_t               ),
-    .axi_aw_chan_t         ( axi_aw_chan_t               ),
-    .axi_w_chan_t          ( axi_w_chan_t                ),
-    .axi_req_t             ( axi_req_t                   ),
-    .axi_rsp_t             ( axi_rsp_t                   )
+    .AxiIdWidth            ( AxiIdWidth                  )
   ) i_cache_subsystem (
     // to D$
     .clk_i                 ( clk_i                       ),
@@ -971,10 +973,11 @@ module cva6 import ariane_pkg::*; #(
         cycles <= cycles + 1;
     end
   end
-
+  `ifndef CONTRACT
   final begin
     $fclose(f);
   end
+  `endif
 `endif // VERILATOR
 //pragma translate_on
 

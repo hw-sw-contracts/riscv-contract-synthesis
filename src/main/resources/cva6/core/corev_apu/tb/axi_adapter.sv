@@ -16,15 +16,16 @@
  */
 //import std_cache_pkg::*;
 
+typedef ariane_axi::req_t axi_req_t;
+typedef ariane_axi::resp_t axi_rsp_t;
+
 module axi_adapter #(
   parameter int unsigned DATA_WIDTH            = 256,
   parameter logic        CRITICAL_WORD_FIRST   = 0, // the AXI subsystem needs to support wrapping reads for this feature
   parameter int unsigned CACHELINE_BYTE_OFFSET = 8,
   parameter int unsigned AXI_ADDR_WIDTH        = 0,
   parameter int unsigned AXI_DATA_WIDTH        = 0,
-  parameter int unsigned AXI_ID_WIDTH          = 0,
-  parameter type axi_req_t = ariane_axi::req_t,
-  parameter type axi_rsp_t = ariane_axi::resp_t
+  parameter int unsigned AXI_ID_WIDTH          = 0
 )(
   input  logic                             clk_i,  // Clock
   input  logic                             rst_ni, // Asynchronous reset active low
@@ -69,7 +70,22 @@ module axi_adapter #(
   ariane_pkg::amo_t amo_d, amo_q;
   logic [1:0] size_d, size_q;
 
-  always_comb begin : axi_fsm
+  logic req_q;
+  always_ff @(posedge clk_i or negedge rst_ni) begin
+    if (~rst_ni) begin
+      // start in flushing state and initialize the memory
+      req_q         <= 0;
+    end else begin
+      req_q       <= req_i;
+    end
+  end
+
+  //always_comb begin : axi_fsm
+    always @(
+        addr_i, size_i, id_i, amo_i, type_i, wdata_i[0], be_i[0], req_q, we_i,
+        cache_line_q, state_q, cnt_q, addr_offset_q, id_q, amo_q, size_q,
+        axi_resp_i.r.id, axi_resp_i.r.data, axi_resp_i.aw_ready, axi_resp_i.w_ready, axi_resp_i.ar_ready,  axi_resp_i.b.id, axi_resp_i.b_valid, axi_resp_i.r_valid, index, axi_resp_i.r.last
+      ) begin : axi_fsm
     // Default assignments
     axi_req_o.aw_valid  = 1'b0;
     // Cast to AXI address width
@@ -136,7 +152,7 @@ module axi_adapter #(
       IDLE: begin
         cnt_d = '0;
         // we have an incoming request
-        if (req_i) begin
+        if (req_q) begin
           // is this a read or write?
           // write
           if (we_i) begin
@@ -166,7 +182,7 @@ module axi_adapter #(
             // its a request for the whole cache line
             end else begin
               // bursts of AMOs unsupported
-              assert (amo_i == ariane_pkg::AMO_NONE) 
+              assert (amo_i == ariane_pkg::AMO_NONE)
                 else $fatal("Bursts of atomic operations are not supported");
 
               axi_req_o.aw.len = BURST_SIZE; // number of bursts to do
@@ -194,7 +210,7 @@ module axi_adapter #(
 
             gnt_o = axi_resp_i.ar_ready;
             if (type_i != ariane_axi::SINGLE_REQ) begin
-              assert (amo_i == ariane_pkg::AMO_NONE) 
+              assert (amo_i == ariane_pkg::AMO_NONE)
                 else $fatal("Bursts of atomic operations are not supported");
 
               axi_req_o.ar.len = BURST_SIZE;
@@ -396,7 +412,7 @@ module axi_adapter #(
         id_o    = id_q;
       end
     endcase
-  end
+  end : axi_fsm
 
   // ----------------
   // Registers

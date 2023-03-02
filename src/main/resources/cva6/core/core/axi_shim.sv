@@ -18,15 +18,15 @@
  *
  */
 
+typedef ariane_axi::req_t axi_req_t;
+typedef ariane_axi::resp_t axi_rsp_t;
 
 module axi_shim #(
   parameter int unsigned AxiUserWidth = 64, // data width in dwords, this is also the maximum burst length, must be >=2
   parameter int unsigned AxiNumWords = 4, // data width in dwords, this is also the maximum burst length, must be >=2
   parameter int unsigned AxiAddrWidth = 0,
   parameter int unsigned AxiDataWidth = 0,
-  parameter int unsigned AxiIdWidth   = 0,
-  parameter type axi_req_t = ariane_axi::req_t,
-  parameter type axi_rsp_t = ariane_axi::resp_t
+  parameter int unsigned AxiIdWidth   = 0
 ) (
   input  logic                            clk_i,  // Clock
   input  logic                            rst_ni, // Asynchronous reset active low

@@ -261,10 +261,10 @@ module wt_dcache_wbuffer import ariane_pkg::*; import wt_cache_pkg::*; #(
     .clk_i  (clk_i       ),
     .rst_ni (rst_ni      ),
     .flush_i('0          ),
-    .rr_i   ('0          ),
+    .rr_i   (2'b0          ),
     .req_i  (~tx_vld_o   ),
     .gnt_o  (            ),
-    .data_i ('0          ),
+    .data_i (4'b0          ),
     .gnt_i  (dirty_rd_en ),
     .req_o  (            ),
     .data_o (            ),
@@ -357,12 +357,12 @@ module wt_dcache_wbuffer import ariane_pkg::*; import wt_cache_pkg::*; #(
   rr_arb_tree #(
     .NumIn     ( DCACHE_WBUF_DEPTH ),
     .LockIn    ( 1'b1              ),
-    .DataType  ( wbuffer_t         )
+    .DataType  ( $bits(wbuffer_t)-1)
   ) i_dirty_rr (
     .clk_i  ( clk_i             ),
     .rst_ni ( rst_ni            ),
     .flush_i( '0                ),
-    .rr_i   ( '0                ),
+    .rr_i   ( 3'b0                ),
     .req_i  ( dirty             ),
     .gnt_o  (                   ),
     .data_i ( wbuffer_q         ),
@@ -375,12 +375,12 @@ module wt_dcache_wbuffer import ariane_pkg::*; import wt_cache_pkg::*; #(
   // next word to lookup in the cache
   rr_arb_tree #(
     .NumIn     ( DCACHE_WBUF_DEPTH ),
-    .DataType  ( wbuffer_t         )
+    .DataType  ( $bits(wbuffer_t)-1)
   ) i_clean_rr (
     .clk_i  ( clk_i             ),
     .rst_ni ( rst_ni            ),
     .flush_i( '0                ),
-    .rr_i   ( '0                ),
+    .rr_i   ( 3'b0                ),
     .req_i  ( tocheck           ),
     .gnt_o  (                   ),
     .data_i ( wbuffer_q         ),

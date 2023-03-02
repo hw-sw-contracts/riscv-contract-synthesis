@@ -13,15 +13,15 @@
 // Description: adapter module to connect the L1D$ and L1I$ to a 64bit AXI bus.
 //
 
+typedef ariane_axi::req_t axi_req_t;
+typedef ariane_axi::resp_t axi_rsp_t;
 
 module wt_axi_adapter import ariane_pkg::*; import wt_cache_pkg::*; #(
   parameter int unsigned ReqFifoDepth  = 2,
   parameter int unsigned MetaFifoDepth = wt_cache_pkg::DCACHE_MAX_TX,
   parameter int unsigned AxiAddrWidth = 0,
   parameter int unsigned AxiDataWidth = 0,
-  parameter int unsigned AxiIdWidth   = 0,
-  parameter type axi_req_t = ariane_axi::req_t,
-  parameter type axi_rsp_t = ariane_axi::resp_t
+  parameter int unsigned AxiIdWidth   = 0
 ) (
   input logic                  clk_i,
   input logic                  rst_ni,
@@ -115,7 +115,7 @@ module wt_axi_adapter import ariane_pkg::*; import wt_cache_pkg::*; #(
     .rr_i   ('0      ),
     .req_i  (arb_req ),
     .gnt_o  (arb_ack ),
-    .data_i ('0      ),
+    .data_i (2'b0      ),
     .gnt_i  (arb_gnt ),
     .req_o  (        ),
     .data_o (        ),
@@ -257,7 +257,7 @@ module wt_axi_adapter import ariane_pkg::*; import wt_cache_pkg::*; #(
   end
 
   fifo_v3 #(
-    .dtype       (  icache_req_t            ),
+    .dtype       (  $bits(icache_req_t) - 1 ),
     .DEPTH       (  ReqFifoDepth            )
   ) i_icache_data_fifo (
     .clk_i       (  clk_i                   ),
@@ -274,7 +274,7 @@ module wt_axi_adapter import ariane_pkg::*; import wt_cache_pkg::*; #(
   );
 
   fifo_v3 #(
-    .dtype       (  dcache_req_t            ),
+    .dtype       (  $bits(dcache_req_t) - 1 ),
     .DEPTH       (  ReqFifoDepth            )
   ) i_dcache_data_fifo (
     .clk_i       (  clk_i                   ),
@@ -593,9 +593,7 @@ module wt_axi_adapter import ariane_pkg::*; import wt_cache_pkg::*; #(
     .AxiAddrWidth    ( AxiAddrWidth   ),
     .AxiDataWidth    ( AxiDataWidth   ),
     .AxiIdWidth      ( AxiIdWidth     ),
-    .AxiUserWidth    ( AXI_USER_WIDTH ),
-    .axi_req_t       ( axi_req_t      ),
-    .axi_rsp_t       ( axi_rsp_t      )
+    .AxiUserWidth    ( AXI_USER_WIDTH )
   ) i_axi_shim (
     .clk_i           ( clk_i             ),
     .rst_ni          ( rst_ni            ),

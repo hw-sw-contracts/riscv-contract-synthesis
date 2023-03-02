@@ -74,12 +74,20 @@ module store_unit import ariane_pkg::*; (
     assign vaddr_o    = lsu_ctrl_i.vaddr; // virtual address
     assign trans_id_o = trans_id_q; // transaction id from previous cycle
 
+    logic translation_req_n;
+    logic valid_n;
+    logic pop_st_n;
+    logic st_valid_n;
+    logic st_valid_without_flush_n;
+
     always_comb begin : store_control
-        translation_req_o      = 1'b0;
-        valid_o                = 1'b0;
-        st_valid               = 1'b0;
-        st_valid_without_flush = 1'b0;
-        pop_st_o               = 1'b0;
+    //always @(lsu_ctrl_i.trans_id, state_q, st_ready, flush_i, instr_is_amo, ex_i, dtlb_hit_i, ex_i.valid) begin //, valid_i
+    //always @(posedge clk_i or negedge rst_ni) begin
+        translation_req_n      = 1'b0;
+        valid_n                = 1'b0;
+        st_valid_n               = 1'b0;
+        st_valid_without_flush_n = 1'b0;
+        pop_st_n               = 1'b0;
         ex_o                   = ex_i;
         trans_id_n             = lsu_ctrl_i.trans_id;
         state_d                     = state_q;
@@ -89,45 +97,45 @@ module store_unit import ariane_pkg::*; (
             IDLE: begin
                 if (valid_i) begin
                     state_d = VALID_STORE;
-                    translation_req_o = 1'b1;
-                    pop_st_o = 1'b1;
+                    translation_req_n = 1'b1;
+                    pop_st_n = 1'b1;
                     // check if translation was valid and we have space in the store buffer
                     // otherwise simply stall
                     if (!dtlb_hit_i) begin
                         state_d = WAIT_TRANSLATION;
-                        pop_st_o = 1'b0;
+                        pop_st_n = 1'b0;
                     end
 
                     if (!st_ready) begin
                         state_d = WAIT_STORE_READY;
-                        pop_st_o = 1'b0;
+                        pop_st_n = 1'b0;
                     end
                 end
             end
 
             VALID_STORE: begin
-                valid_o  = 1'b1;
+                valid_n  = 1'b1;
                 // post this store to the store buffer if we are not flushing
                 if (!flush_i)
-                    st_valid = 1'b1;
+                    st_valid_n = 1'b1;
 
-                st_valid_without_flush = 1'b1;
+                st_valid_without_flush_n = 1'b1;
 
                 // we have another request and its not an AMO (the AMO buffer only has depth 1)
                 if (valid_i && !instr_is_amo) begin
 
-                    translation_req_o = 1'b1;
+                    translation_req_n = 1'b1;
                     state_d = VALID_STORE;
-                    pop_st_o = 1'b1;
+                    pop_st_n = 1'b1;
 
                     if (!dtlb_hit_i) begin
                         state_d = WAIT_TRANSLATION;
-                        pop_st_o = 1'b0;
+                        pop_st_n = 1'b0;
                     end
 
                     if (!st_ready) begin
                         state_d = WAIT_STORE_READY;
-                        pop_st_o = 1'b0;
+                        pop_st_n = 1'b0;
                     end
                 // if we do not have another request go back to idle
                 end else begin
@@ -138,7 +146,7 @@ module store_unit import ariane_pkg::*; (
             // the store queue is currently full
             WAIT_STORE_READY: begin
                 // keep the translation request high
-                translation_req_o = 1'b1;
+                translation_req_n = 1'b1;
 
                 if (st_ready && dtlb_hit_i) begin
                     state_d = IDLE;
@@ -149,7 +157,7 @@ module store_unit import ariane_pkg::*; (
             // but we know that the store queue is not full as we could only have landed here if
             // it wasn't full
             WAIT_TRANSLATION: begin
-                translation_req_o = 1'b1;
+                translation_req_n = 1'b1;
 
                 if (dtlb_hit_i) begin
                     state_d = IDLE;
@@ -163,10 +171,10 @@ module store_unit import ariane_pkg::*; (
         // we got an address translation exception (access rights, misaligned or page fault)
         if (ex_i.valid && (state_q != IDLE)) begin
             // the only difference is that we do not want to store this request
-            pop_st_o = 1'b1;
+            pop_st_n = 1'b1;
             st_valid = 1'b0;
             state_d  = IDLE;
-            valid_o  = 1'b1;
+            valid_n  = 1'b1;
         end
 
         if (flush_i)
@@ -178,6 +186,7 @@ module store_unit import ariane_pkg::*; (
     // -----------
     // re-align the write data to comply with the address offset
     always_comb begin
+    //always @(lsu_ctrl_i.be, instr_is_amo, lsu_ctrl_i.data[riscv::XLEN-1:0], lsu_ctrl_i.vaddr[2:0], lsu_ctrl_i.data, lsu_ctrl_i.operator) begin
         st_be_n   = lsu_ctrl_i.be;
         // don't shift the data if we are going to perform an AMO as we still need to operate on this data
         st_data_n = instr_is_amo ? lsu_ctrl_i.data[riscv::XLEN-1:0]
@@ -265,6 +274,12 @@ module store_unit import ariane_pkg::*; (
             st_data_size_q <= '0;
             trans_id_q     <= '0;
             amo_op_q       <= AMO_NONE;
+
+          translation_req_o      <= 1'b0;
+          valid_o      <= 1'b0;
+          pop_st_o      <= 1'b0;
+          st_valid      <= 1'b0;
+          st_valid_without_flush      <= 1'b0;
         end else begin
             state_q        <= state_d;
             st_be_q        <= st_be_n;
@@ -272,6 +287,12 @@ module store_unit import ariane_pkg::*; (
             trans_id_q     <= trans_id_n;
             st_data_size_q <= st_data_size_n;
             amo_op_q       <= amo_op_d;
+
+          translation_req_o      <= translation_req_n;
+          valid_o      <= valid_n;
+          pop_st_o      <= pop_st_n;
+          st_valid      <= st_valid_n;
+          st_valid_without_flush      <= st_valid_without_flush_n;
         end
     end
 

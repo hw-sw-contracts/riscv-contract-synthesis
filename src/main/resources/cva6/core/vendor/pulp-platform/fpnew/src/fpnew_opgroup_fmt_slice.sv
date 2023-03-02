@@ -19,7 +19,7 @@ module fpnew_opgroup_fmt_slice #(
   parameter logic                    EnableVectors = 1'b1,
   parameter int unsigned             NumPipeRegs   = 0,
   parameter fpnew_pkg::pipe_config_t PipeConfig    = fpnew_pkg::BEFORE,
-  parameter type                     TagType       = logic,
+  parameter int unsigned             TagType       = 1,
   // Do not change
   localparam int unsigned NUM_OPERANDS = fpnew_pkg::num_operands(OpGroup)
 ) (
@@ -32,7 +32,7 @@ module fpnew_opgroup_fmt_slice #(
   input fpnew_pkg::operation_e              op_i,
   input logic                               op_mod_i,
   input logic                               vectorial_op_i,
-  input TagType                             tag_i,
+  input logic [TagType:0]                   tag_i,
   // Input Handshake
   input  logic                              in_valid_i,
   output logic                              in_ready_o,
@@ -41,7 +41,7 @@ module fpnew_opgroup_fmt_slice #(
   output logic [Width-1:0]                  result_o,
   output fpnew_pkg::status_t                status_o,
   output logic                              extension_bit_o,
-  output TagType                            tag_o,
+  output logic [TagType:0]                  tag_o,
   // Output handshake
   output logic                              out_valid_o,
   input  logic                              out_ready_i,
@@ -62,7 +62,7 @@ module fpnew_opgroup_fmt_slice #(
   fpnew_pkg::status_t    [NUM_LANES-1:0] lane_status;
   logic                  [NUM_LANES-1:0] lane_ext_bit; // only the first one is actually used
   fpnew_pkg::classmask_e [NUM_LANES-1:0] lane_class_mask;
-  TagType                [NUM_LANES-1:0] lane_tags; // only the first one is actually used
+  logic [TagType:0]      [NUM_LANES-1:0] lane_tags; // only the first one is actually used
   logic                  [NUM_LANES-1:0] lane_vectorial, lane_busy, lane_is_class; // dito
 
   logic result_is_vector, result_is_class;
@@ -103,7 +103,7 @@ module fpnew_opgroup_fmt_slice #(
           .NumPipeRegs ( NumPipeRegs ),
           .PipeConfig  ( PipeConfig  ),
           .TagType     ( TagType     ),
-          .AuxType     ( logic       )
+          .AuxType     ( 1           )
         ) i_fma (
           .clk_i,
           .rst_ni,
@@ -134,7 +134,7 @@ module fpnew_opgroup_fmt_slice #(
         //   .NumPipeRegs(NumPipeRegs),
         //   .PipeConfig (PipeConfig),
         //   .TagType    (TagType),
-        //   .AuxType    (logic)
+        //   .AuxType    (1)
         // ) i_divsqrt (
         //   .clk_i,
         //   .rst_ni,
@@ -164,7 +164,7 @@ module fpnew_opgroup_fmt_slice #(
           .NumPipeRegs(NumPipeRegs),
           .PipeConfig (PipeConfig),
           .TagType    (TagType),
-          .AuxType    (logic)
+          .AuxType    (1)
         ) i_noncomp (
           .clk_i,
           .rst_ni,

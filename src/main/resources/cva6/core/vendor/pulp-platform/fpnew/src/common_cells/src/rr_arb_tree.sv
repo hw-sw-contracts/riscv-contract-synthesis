@@ -34,7 +34,7 @@
 module rr_arb_tree #(
   parameter int unsigned NumIn      = 64,
   parameter int unsigned DataWidth  = 32,
-  parameter type         DataType   = logic [DataWidth-1:0],
+  parameter int unsigned DataType   = DataWidth-1,
   parameter bit          ExtPrio    = 1'b0, // set to 1'b1 to enable
   parameter bit          AxiVldRdy  = 1'b0, // treat req/gnt as vld/rdy
   parameter bit          LockIn     = 1'b0  // set to 1'b1 to enable
@@ -48,13 +48,14 @@ module rr_arb_tree #(
   /* verilator lint_off UNOPTFLAT */
   output logic [NumIn-1:0]                 gnt_o,
   /* verilator lint_on UNOPTFLAT */
-  input  DataType [NumIn-1:0]              data_i,
+  input  DataType_t [NumIn-1:0]              data_i,
   // arbitrated output
   input  logic                             gnt_i,
   output logic                             req_o,
-  output DataType                          data_o,
+  output logic [DataType:0]                          data_o,
   output logic [$clog2(NumIn)-1:0]         idx_o
 );
+  typedef logic [DataType:0] DataType_t;
   // just pass through in this corner case
   if (NumIn == unsigned'(1)) begin
     assign req_o    = req_i[0];
@@ -67,7 +68,7 @@ module rr_arb_tree #(
 
     /* verilator lint_off UNOPTFLAT */
     logic [2**NumLevels-2:0][NumLevels-1:0]  index_nodes; // used to propagate the indices
-    DataType [2**NumLevels-2:0]              data_nodes;  // used to propagate the data
+    DataType_t [2**NumLevels-2:0]              data_nodes;  // used to propagate the data
     logic [2**NumLevels-2:0]                 gnt_nodes;   // used to propagate the grant to masters
     logic [2**NumLevels-2:0]                 req_nodes;   // used to propagate the requests to slave
     /* lint_off */
@@ -184,8 +185,8 @@ module rr_arb_tree #(
           // if index is out of range, fill up with zeros (will get pruned)
           if (unsigned'(l) * 2 > NumIn-1) begin
             assign req_nodes[idx0]   = 1'b0;
-            assign index_nodes[idx0] = DataType'('0);
-            assign data_nodes[idx0]  = DataType'('0);
+            assign index_nodes[idx0] = DataType_t'('0);
+            assign data_nodes[idx0]  = DataType_t'('0);
           end
         //////////////////////////////////////////////////////////////
         // general case for other levels within the tree

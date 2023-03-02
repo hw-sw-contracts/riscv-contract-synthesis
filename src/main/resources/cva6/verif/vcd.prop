@@ -1,0 +1,33 @@
+    always @(posedge clk) begin
+        if (finished && ctr_equiv && !atk_equiv) 
+        begin
+            $display("FAIL");
+            $finish;
+        end
+        else if (finished) 
+        begin
+            $display("SUCCESS");
+            $finish;
+        end
+    end
+
+    initial
+	begin
+		$dumpfile("sim.vcd");
+		//$dumpvars();
+        $dumpvars(1, top);
+        $dumpvars(1, top.ctr);
+		$dumpvars(1, top.control);
+		$dumpvars(1, top.atk);
+		#200000;
+        $display("TIMEOUT");
+		$finish;
+	end
+
+    always begin
+		clk <= 1;
+        #5;
+		clk <= 0;
+        #5;
+    end
+    

@@ -51,14 +51,14 @@ module dromajo_ram
   initial begin
     integer hex_file, num_bytes;
     longint address, value;
-    string f_name;
+    integer f_name;
     // init to 0
     for (int k=0; k<DATA_DEPTH; k++) begin
       Mem_DP[k] = 0;
     end
 
     // sync with dromajo
-    if ($value$plusargs("checkpoint=%s", f_name)) begin
+    if ($value$plusargs("checkpoint=%d", f_name)) begin
       hex_file = $fopen({f_name,".mainram.hex"}, "r");
       while (!$feof(hex_file)) begin
         num_bytes = $fscanf(hex_file, "%d %h\n", address, value);

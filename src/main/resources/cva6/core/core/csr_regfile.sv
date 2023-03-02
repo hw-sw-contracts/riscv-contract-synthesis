@@ -806,7 +806,7 @@ module csr_regfile import ariane_pkg::*; #(
                     dpc_d = {{riscv::XLEN-riscv::VLEN{1'b0}},epc_o};
                 // consecutive PC
                 end else begin
-                    dpc_d = {{riscv::XLEN-riscv::VLEN{commit_instr_i[0].pc[riscv::VLEN-1]}}, commit_instr_i[0].pc + (commit_instr_i[0].is_compressed ? 'h2 : 'h4)};
+                    dpc_d = {{riscv::XLEN-riscv::VLEN{commit_instr_i[0].pc[riscv::VLEN-1]}}, commit_instr_i[0].pc + (commit_instr_i[0].is_compressed ? 8'h2 : 8'h4)};
                 end
                 debug_mode_d = 1'b1;
                 set_debug_pc_o = 1'b1;

@@ -346,7 +346,9 @@ module issue_read_operands import ariane_pkg::*; #(
     // We can issue an instruction if we do not detect that any other instruction is writing the same
     // destination register.
     // We also need to check if there is an unresolved branch in the scoreboard.
-    always_comb begin : issue_scoreboard
+    always @(issue_instr_valid_i, stall, fu_busy, issue_instr_i.op, rd_clobber_fpr_i, rd_clobber_gpr_i, issue_instr_i.rd, we_fpr_i, we_gpr_i, waddr_i, issue_instr_i.ex.valid, issue_instr_i.fu, mult_valid_q) begin
+    // always_comb begin : issue_scoreboard
+    // Note: always_comb translates to always @(*) in sv2v, which causes a race condition on issue_instr_i, as issue_instr_i.pc is updated when retiring the instruction
         // default assignment
         issue_ack_o = 1'b0;
         // check that we didn't stall, that the instruction we got is valid

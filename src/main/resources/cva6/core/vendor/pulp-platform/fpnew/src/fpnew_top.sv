@@ -15,7 +15,7 @@ module fpnew_top #(
   // FPU configuration
   parameter fpnew_pkg::fpu_features_t       Features       = fpnew_pkg::RV64D_Xsflt,
   parameter fpnew_pkg::fpu_implementation_t Implementation = fpnew_pkg::DEFAULT_NOREGS,
-  parameter type                            TagType        = logic,
+  parameter int unsigned                    TagType        = 1,
   // Do not change
   localparam int unsigned WIDTH        = Features.Width,
   localparam int unsigned NUM_OPERANDS = 3
@@ -31,7 +31,7 @@ module fpnew_top #(
   input fpnew_pkg::fp_format_e              dst_fmt_i,
   input fpnew_pkg::int_format_e             int_fmt_i,
   input logic                               vectorial_op_i,
-  input TagType                             tag_i,
+  input logic [TagType:0]                   tag_i,
   // Input Handshake
   input  logic                              in_valid_i,
   output logic                              in_ready_o,
@@ -39,7 +39,7 @@ module fpnew_top #(
   // Output signals
   output logic [WIDTH-1:0]                  result_o,
   output fpnew_pkg::status_t                status_o,
-  output TagType                            tag_o,
+  output logic [TagType:0]                  tag_o,
   // Output handshake
   output logic                              out_valid_o,
   input  logic                              out_ready_i,
@@ -56,7 +56,7 @@ module fpnew_top #(
   typedef struct packed {
     logic [WIDTH-1:0]   result;
     fpnew_pkg::status_t status;
-    TagType             tag;
+    logic [TagType:0]   tag;
   } output_t;
 
   // Handshake signals for the blocks
@@ -146,7 +146,7 @@ module fpnew_top #(
   // Round-Robin arbiter to decide which result to use
   rr_arb_tree #(
     .NumIn     ( NUM_OPGROUPS ),
-    .DataType  ( output_t     ),
+    .DataType  ( $bits(output_t)-1),
     .AxiVldRdy ( 1'b1         )
   ) i_arbiter (
     .clk_i,

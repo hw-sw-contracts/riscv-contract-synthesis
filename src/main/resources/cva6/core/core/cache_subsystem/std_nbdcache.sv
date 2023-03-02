@@ -12,14 +12,14 @@
 // Date: 13.10.2017
 // Description: Nonblocking private L1 dcache
 
+typedef ariane_axi::req_t axi_req_t;
+typedef ariane_axi::resp_t axi_rsp_t;
 
 module std_nbdcache import std_cache_pkg::*; import ariane_pkg::*; #(
     parameter ariane_cfg_t ArianeCfg        = ArianeDefaultConfig, // contains cacheable regions
     parameter int unsigned AXI_ADDR_WIDTH   = 0,
     parameter int unsigned AXI_DATA_WIDTH   = 0,
-    parameter int unsigned AXI_ID_WIDTH     = 0,
-    parameter type axi_req_t = ariane_axi::req_t,
-    parameter type axi_rsp_t = ariane_axi::resp_t
+    parameter int unsigned AXI_ID_WIDTH     = 0
 )(
     input  logic                           clk_i,       // Clock
     input  logic                           rst_ni,      // Asynchronous reset active low
@@ -135,9 +135,7 @@ import std_cache_pkg::*;
         .NR_PORTS               ( 3                    ),
         .AXI_ADDR_WIDTH         ( AXI_ADDR_WIDTH       ),
         .AXI_DATA_WIDTH         ( AXI_DATA_WIDTH       ),
-        .AXI_ID_WIDTH           ( AXI_ID_WIDTH         ),
-        .axi_req_t              ( axi_req_t            ),
-        .axi_rsp_t              ( axi_rsp_t            )
+        .AXI_ID_WIDTH           ( AXI_ID_WIDTH         )
     ) i_miss_handler (
         .flush_i                ( flush_i              ),
         .busy_i                 ( |busy                ),

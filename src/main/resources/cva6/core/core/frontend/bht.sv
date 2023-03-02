@@ -116,7 +116,7 @@ module bht #(
 
     end else begin : gen_fpga_bht //FPGA TARGETS
 
-      // number of bits par word in the bram 
+      // number of bits par word in the bram
       localparam BRAM_WORD_BITS = $bits(ariane_pkg::bht_t);
       logic [ROW_INDEX_BITS-1:0]                                 row_index;
       logic [ariane_pkg::INSTR_PER_FETCH-1:0]                    bht_ram_we;
@@ -161,7 +161,7 @@ module bht #(
             if (update_row_index == i) begin
               bht_ram_read_address_1[i*$clog2(NR_ROWS) +: $clog2(NR_ROWS)] = update_pc;
               bht[i].saturation_counter = bht_ram_rdata_1[i*BRAM_WORD_BITS +: 2];
-            
+
               if (bht[i].saturation_counter == 2'b11) begin
                 // we can safely decrease it
                 if (!bht_update_i.taken)
@@ -181,13 +181,13 @@ module bht #(
                 else
                   bht_updated[i].saturation_counter = bht[i].saturation_counter - 1;
               end
-            
+
               bht_updated[i].valid = 1'b1;
               bht_ram_we[i] = 1'b1;
               bht_ram_write_address[i*$clog2(NR_ROWS) +: $clog2(NR_ROWS)] = update_pc;
               //bht_ram_wdata[(i+1)*BRAM_WORD_BITS-1] =  1'b1; //valid
-              bht_ram_wdata[i*BRAM_WORD_BITS +: BRAM_WORD_BITS] =  {bht_updated[i].valid , bht_updated[i].saturation_counter}; 
-            
+              bht_ram_wdata[i*BRAM_WORD_BITS +: BRAM_WORD_BITS] =  {bht_updated[i].valid , bht_updated[i].saturation_counter};
+
             end
           end
         end
@@ -199,7 +199,7 @@ module bht #(
           .DATA_DEPTH (NR_ROWS),
           .DATA_WIDTH(BRAM_WORD_BITS)
         ) i_bht_ram (
-          .Clk_CI       ( clk_i                                                        ),  
+          .Clk_CI       ( clk_i                                                        ),
           .WrEn_SI      ( bht_ram_we[i]                                                ),
           .WrAddr_DI    ( bht_ram_write_address[i*$clog2(NR_ROWS) +: $clog2(NR_ROWS)]  ),
           .WrData_DI    ( bht_ram_wdata[i*BRAM_WORD_BITS +: BRAM_WORD_BITS]            ),

@@ -11,7 +11,7 @@
 
 // Author: Stefan Mach <smach@iis.ee.ethz.ch>
 
-`include "common_cells/registers.svh"
+//`include "common_cells/registers.svh"
 
 module fpnew_opgroup_multifmt_slice #(
   parameter fpnew_pkg::opgroup_e     OpGroup       = fpnew_pkg::CONV,
@@ -22,7 +22,7 @@ module fpnew_opgroup_multifmt_slice #(
   parameter logic                    EnableVectors = 1'b1,
   parameter int unsigned             NumPipeRegs   = 0,
   parameter fpnew_pkg::pipe_config_t PipeConfig    = fpnew_pkg::BEFORE,
-  parameter type                     TagType       = logic,
+  parameter int unsigned             TagType       = 1,
   // Do not change
   localparam int unsigned NUM_OPERANDS = fpnew_pkg::num_operands(OpGroup),
   localparam int unsigned NUM_FORMATS  = fpnew_pkg::NUM_FP_FORMATS
@@ -39,7 +39,7 @@ module fpnew_opgroup_multifmt_slice #(
   input fpnew_pkg::fp_format_e                    dst_fmt_i,
   input fpnew_pkg::int_format_e                   int_fmt_i,
   input logic                                     vectorial_op_i,
-  input TagType                                   tag_i,
+  input logic [TagType:0]                         tag_i,
   // Input Handshake
   input  logic                                    in_valid_i,
   output logic                                    in_ready_o,
@@ -48,7 +48,7 @@ module fpnew_opgroup_multifmt_slice #(
   output logic [Width-1:0]                        result_o,
   output fpnew_pkg::status_t                      status_o,
   output logic                                    extension_bit_o,
-  output TagType                                  tag_o,
+  output logic [TagType:0]                        tag_o,
   // Output handshake
   output logic                                    out_valid_o,
   input  logic                                    out_ready_i,
@@ -85,7 +85,7 @@ module fpnew_opgroup_multifmt_slice #(
 
   fpnew_pkg::status_t [NUM_LANES-1:0]   lane_status;
   logic   [NUM_LANES-1:0]               lane_ext_bit; // only the first one is actually used
-  TagType [NUM_LANES-1:0]               lane_tags; // only the first one is actually used
+  logic   [TagType:0] [NUM_LANES-1:0]   lane_tags; // only the first one is actually used
   logic   [NUM_LANES-1:0][AUX_BITS-1:0] lane_aux; // only the first one is actually used
   logic   [NUM_LANES-1:0]               lane_busy; // dito
 
@@ -201,7 +201,7 @@ module fpnew_opgroup_multifmt_slice #(
           .NumPipeRegs ( NumPipeRegs          ),
           .PipeConfig  ( PipeConfig           ),
           .TagType     ( TagType              ),
-          .AuxType     ( logic [AUX_BITS-1:0] )
+          .AuxType     ( AUX_BITS-1           )
         ) i_fpnew_fma_multi (
           .clk_i,
           .rst_ni,
@@ -233,7 +233,7 @@ module fpnew_opgroup_multifmt_slice #(
           .NumPipeRegs ( NumPipeRegs          ),
           .PipeConfig  ( PipeConfig           ),
           .TagType     ( TagType              ),
-          .AuxType     ( logic [AUX_BITS-1:0] )
+          .AuxType     ( AUX_BITS-1           )
         ) i_fpnew_divsqrt_multi (
           .clk_i,
           .rst_ni,
@@ -265,7 +265,7 @@ module fpnew_opgroup_multifmt_slice #(
           .NumPipeRegs  ( NumPipeRegs          ),
           .PipeConfig   ( PipeConfig           ),
           .TagType      ( TagType              ),
-          .AuxType      ( logic [AUX_BITS-1:0] )
+          .AuxType      ( AUX_BITS-1           )
         ) i_fpnew_cast_multi (
           .clk_i,
           .rst_ni,

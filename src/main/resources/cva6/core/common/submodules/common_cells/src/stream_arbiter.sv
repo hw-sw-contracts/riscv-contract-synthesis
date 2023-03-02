@@ -14,21 +14,23 @@
 // arbitration scheme is round-robin with "look ahead", see the `rrarbiter` for details.
 
 module stream_arbiter #(
-    parameter type      DATA_T = logic,   // Vivado requires a default value for type parameters.
-    parameter integer   N_INP = -1,       // Synopsys DC requires a default value for parameters.
-    parameter           ARBITER = "rr"    // "rr" or "prio"
+    parameter int unsigned DATA_T = 1,   // Vivado requires a default value for type parameters.
+    parameter integer      N_INP = -1,       // Synopsys DC requires a default value for parameters.
+    parameter              ARBITER = "rr"    // "rr" or "prio"
 ) (
     input  logic              clk_i,
     input  logic              rst_ni,
 
-    input  DATA_T [N_INP-1:0] inp_data_i,
-    input  logic  [N_INP-1:0] inp_valid_i,
-    output logic  [N_INP-1:0] inp_ready_o,
+    input  DATA_T_t [N_INP-1:0] inp_data_i,
+    input  logic  [N_INP-1:0]            inp_valid_i,
+    output logic  [N_INP-1:0]            inp_ready_o,
 
-    output DATA_T             oup_data_o,
-    output logic              oup_valid_o,
-    input  logic              oup_ready_i
+    output logic  [DATA_T:0]             oup_data_o,
+    output logic                         oup_valid_o,
+    input  logic                         oup_ready_i
 );
+
+typedef logic [DATA_T:0] DATA_T_t;
 
   stream_arbiter_flushable #(
     .DATA_T   (DATA_T),

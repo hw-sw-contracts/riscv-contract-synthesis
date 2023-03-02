@@ -14,7 +14,7 @@
 // arbitration scheme is fair round-robin tree, see `rr_arb_tree` for details.
 
 module stream_arbiter_flushable #(
-    parameter type      DATA_T = logic,   // Vivado requires a default value for type parameters.
+    parameter int unsigned DATA_T = 1,   // Vivado requires a default value for type parameters.
     parameter integer   N_INP = -1,       // Synopsys DC requires a default value for parameters.
     parameter           ARBITER = "rr"    // "rr" or "prio"
 ) (
@@ -22,14 +22,16 @@ module stream_arbiter_flushable #(
     input  logic              rst_ni,
     input  logic              flush_i,
 
-    input  DATA_T [N_INP-1:0] inp_data_i,
-    input  logic  [N_INP-1:0] inp_valid_i,
-    output logic  [N_INP-1:0] inp_ready_o,
+    input  DATA_T_t [N_INP-1:0] inp_data_i,
+    input  logic  [N_INP-1:0]            inp_valid_i,
+    output logic  [N_INP-1:0]            inp_ready_o,
 
-    output DATA_T             oup_data_o,
-    output logic              oup_valid_o,
-    input  logic              oup_ready_i
+    output DATA_T_t             oup_data_o,
+    output logic                         oup_valid_o,
+    input  logic                         oup_ready_i
 );
+
+typedef logic [DATA_T:0] DATA_T_t;
 
   if (ARBITER == "rr") begin : gen_rr_arb
     rr_arb_tree #(
@@ -42,7 +44,7 @@ module stream_arbiter_flushable #(
       .clk_i,
       .rst_ni,
       .flush_i,
-      .rr_i   ('0),
+      .rr_i   (2'b0),
       .req_i  (inp_valid_i),
       .gnt_o  (inp_ready_o),
       .data_i (inp_data_i),
@@ -63,7 +65,7 @@ module stream_arbiter_flushable #(
       .clk_i,
       .rst_ni,
       .flush_i,
-      .rr_i   ('0),
+      .rr_i   (2'b0),
       .req_i  (inp_valid_i),
       .gnt_o  (inp_ready_o),
       .data_i (inp_data_i),

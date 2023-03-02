@@ -47,6 +47,8 @@ module lsu_bypass import ariane_pkg::*; (
     assign ready_o = empty;
 
     always_comb begin
+    //always @(status_cnt_q, write_pointer_q, read_pointer_q, mem_q) begin //) begin , pop_ld_i, pop_st_i, lsu_req_valid_i, lsu_req_i, flush_i
+    //always @(posedge clk_i or negedge rst_ni) begin
         automatic logic [1:0] status_cnt;
         automatic logic write_pointer;
         automatic logic read_pointer;
@@ -94,6 +96,7 @@ module lsu_bypass import ariane_pkg::*; (
 
     // output assignment
     always_comb begin : output_assignments
+    //always @(empty, lsu_req_i, mem_q, read_pointer_q) begin
         if (empty) begin
             lsu_ctrl_o = lsu_req_i;
         end else begin

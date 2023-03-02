@@ -187,7 +187,7 @@ l15_rtrn_t rtrn_fifo_data;
   end // p_req
 
   fifo_v2 #(
-    .dtype       (  icache_req_t            ),
+    .dtype       (  $bits(icache_req_t) - 1 ),
     .DEPTH       (  ADAPTER_REQ_FIFO_DEPTH  )
     ) i_icache_data_fifo (
     .clk_i       (  clk_i                   ),
@@ -205,7 +205,7 @@ l15_rtrn_t rtrn_fifo_data;
   );
 
   fifo_v2 #(
-    .dtype       (  dcache_req_t            ),
+    .dtype       (  $bits(dcache_req_t) - 1 ),
     .DEPTH       (  ADAPTER_REQ_FIFO_DEPTH  )
     ) i_dcache_data_fifo (
     .clk_i       (  clk_i                   ),
@@ -322,7 +322,7 @@ l15_rtrn_t rtrn_fifo_data;
   assign dcache_rtrn_o.inv.all  = rtrn_fifo_data.l15_inval_dcache_all_way;
 
   fifo_v2 #(
-    .dtype       (  l15_rtrn_t               ),
+    .dtype       (  $bits(l15_rtrn_t) - 1    ),
     .DEPTH       (  ADAPTER_RTRN_FIFO_DEPTH  )
   ) i_rtrn_fifo (
     .clk_i       (  clk_i                    ),

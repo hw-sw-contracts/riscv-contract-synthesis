@@ -43,7 +43,11 @@ module frontend import ariane_pkg::*; #(
   // instruction output port -> to processor back-end
   output fetch_entry_t       fetch_entry_o,       // fetch entry containing all relevant data for the ID stage
   output logic               fetch_entry_valid_o, // instruction in IF is valid
-  input  logic               fetch_entry_ready_i  // ID acknowledged this instruction
+  input  logic               fetch_entry_ready_i,  // ID acknowledged this instruction
+  `ifdef CONTRACT
+    input logic enable_issue_i,
+    output logic issue_o,
+  `endif
 );
     // Instruction Cache Registers, from I$
     logic [FETCH_WIDTH-1:0] icache_data_q;
@@ -397,7 +401,7 @@ module frontend import ariane_pkg::*; #(
       .data_i ( ras_update  ),
       .data_o ( ras_predict )
     );
-    
+
     //For FPGA, BTB is implemented in read synchronous BRAM
     //while for ASIC, BTB is implemented in D flip-flop
     //and can be read at the same cycle.
@@ -465,7 +469,11 @@ module frontend import ariane_pkg::*; #(
       .replay_addr_o       ( replay_addr          ),
       .fetch_entry_o       ( fetch_entry_o        ), // to back-end
       .fetch_entry_valid_o ( fetch_entry_valid_o  ), // to back-end
-      .fetch_entry_ready_i ( fetch_entry_ready_i  )  // to back-end
+      .fetch_entry_ready_i ( fetch_entry_ready_i  ), // to back-end
+      `ifdef CONTRACT
+      .enable_issue_i      ( enable_issue_i       ),
+      .issue_o             ( issue_o              ),
+      `endif
     );
 
     // pragma translate_off
@@ -475,4 +483,4 @@ module frontend import ariane_pkg::*; #(
       end
     `endif
     // pragma translate_on
-endmodule
+endmodule : frontend

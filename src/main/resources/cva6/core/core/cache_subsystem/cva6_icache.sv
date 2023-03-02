@@ -436,7 +436,7 @@ end else begin : gen_piton_offset
       // couple of cycle until we write to the cache upon a miss
       .wuser_i   ( '0                       ),
       .wdata_i   ( {vld_wdata[i], cl_tag_q} ),
-      .be_i      ( '1                       ),
+      .be_i      ( 3'b1                       ),
       .ruser_o   (                          ),
       .rdata_o   ( cl_tag_valid_rdata[i]    )
     );
@@ -458,7 +458,7 @@ end else begin : gen_piton_offset
       .addr_i    ( cl_index            ),
       .wuser_i   ( mem_rtrn_i.user     ),
       .wdata_i   ( mem_rtrn_i.data     ),
-      .be_i      ( '1                  ),
+      .be_i      ( 16'b1                  ),
       .ruser_o   ( cl_ruser[i]         ),
       .rdata_o   ( cl_rdata[i]         )
     );

@@ -196,7 +196,7 @@ module load_store_unit import ariane_pkg::*; #(
         );
     end else begin : gen_no_mmu
         assign  icache_areq_o.fetch_valid  = icache_areq_i.fetch_req;
-        assign  icache_areq_o.fetch_paddr  = icache_areq_i.fetch_vaddr[riscv::PLEN-1:0];
+        assign  icache_areq_o.fetch_paddr  = {{riscv::PLEN-32{1'b0}}, icache_areq_i.fetch_vaddr[32:0]};
         assign  icache_areq_o.fetch_exception      = '0;
 
         assign dcache_req_ports_o[0].address_index = '0;
@@ -308,7 +308,7 @@ module load_store_unit import ariane_pkg::*; #(
     // can be tuned to trade-off IPC vs. cycle time
 
     shift_reg #(
-        .dtype ( logic[$bits(ld_valid) + $bits(ld_trans_id) + $bits(ld_result) + $bits(ld_ex) - 1: 0]),
+        .dtype ( $bits(ld_valid) + $bits(ld_trans_id) + $bits(ld_result) + $bits(ld_ex) - 1),
         .Depth ( cva6_config_pkg::CVA6ConfigNrLoadPipeRegs )
     ) i_pipe_reg_load (
         .clk_i,
@@ -318,7 +318,7 @@ module load_store_unit import ariane_pkg::*; #(
     );
 
     shift_reg #(
-        .dtype ( logic[$bits(st_valid) + $bits(st_trans_id) + $bits(st_result) + $bits(st_ex) - 1: 0]),
+        .dtype ( $bits(st_valid) + $bits(st_trans_id) + $bits(st_result) + $bits(st_ex) - 1),
         .Depth ( cva6_config_pkg::CVA6ConfigNrStorePipeRegs )
     ) i_pipe_reg_store (
         .clk_i,
@@ -328,10 +328,22 @@ module load_store_unit import ariane_pkg::*; #(
     );
 
     // determine whether this is a load or store
+    logic st_valid_n;
+    logic ld_valid_n;
+    always_ff @(posedge clk_i or negedge rst_ni) begin
+      if (~rst_ni) begin
+        st_valid_i <= 0;
+        ld_valid_i <= 0;
+      end else begin
+        st_valid_i <= st_valid_n;
+        ld_valid_i <= ld_valid_n;
+      end
+    end
     always_comb begin : which_op
-
-        ld_valid_i = 1'b0;
-        st_valid_i = 1'b0;
+    //always @(lsu_ctrl.fu, lsu_ctrl.valid) begin //) begin //, ) begin , st_translation_req, ld_translation_req, st_vaddr, ld_vaddr
+    //always @(posedge clk_i or negedge rst_ni) begin
+        ld_valid_n = 1'b0;
+        st_valid_n = 1'b0;
 
         translation_req      = 1'b0;
         mmu_vaddr            = {riscv::VLEN{1'b0}};
@@ -340,13 +352,13 @@ module load_store_unit import ariane_pkg::*; #(
         unique case (lsu_ctrl.fu)
             // all loads go here
             LOAD:  begin
-                ld_valid_i           = lsu_ctrl.valid;
+                ld_valid_n           = lsu_ctrl.valid;
                 translation_req      = ld_translation_req;
                 mmu_vaddr            = ld_vaddr;
             end
             // all stores go here
             STORE: begin
-                st_valid_i           = lsu_ctrl.valid;
+                st_valid_n           = lsu_ctrl.valid;
                 translation_req      = st_translation_req;
                 mmu_vaddr            = st_vaddr;
             end
@@ -372,7 +384,7 @@ module load_store_unit import ariane_pkg::*; #(
     // the misaligned exception is passed to the functional unit via the MMU, which in case
     // can augment the exception if other memory related exceptions like a page fault or access errors
     always_comb begin : data_misaligned_detection
-
+    //always @(lsu_ctrl.valid, lsu_ctrl.operator, lsu_ctrl.vaddr[2:0], lsu_ctrl.fu, lsu_ctrl.vaddr, en_ld_st_translation_i, lsu_ctrl.overflow) begin
         misaligned_exception = {
             {riscv::XLEN{1'b0}},
             {riscv::XLEN{1'b0}},

@@ -262,14 +262,14 @@ module scoreboard #(
     // get fu that is going to clobber this register (there should be only one)
     rr_arb_tree #(
       .NumIn(NR_ENTRIES+1),
-      .DataType(ariane_pkg::fu_t),
+      .DataType($bits(ariane_pkg::fu_t)-1),
       .ExtPrio(1'b1),
       .AxiVldRdy(1'b1)
     ) i_sel_gpr_clobbers (
       .clk_i   ( clk_i               ),
       .rst_ni  ( rst_ni              ),
       .flush_i ( 1'b0                ),
-      .rr_i    ( '0                  ),
+      .rr_i    ( 4'b0                  ),
       .req_i   ( gpr_clobber_vld[k]  ),
       .gnt_o   (                     ),
       .data_i  ( clobber_fu          ),
@@ -280,14 +280,14 @@ module scoreboard #(
     );
     rr_arb_tree #(
       .NumIn(NR_ENTRIES+1),
-      .DataType(ariane_pkg::fu_t),
+      .DataType($bits(ariane_pkg::fu_t)-1),
       .ExtPrio(1'b1),
       .AxiVldRdy(1'b1)
     ) i_sel_fpr_clobbers (
       .clk_i   ( clk_i               ),
       .rst_ni  ( rst_ni              ),
       .flush_i ( 1'b0                ),
-      .rr_i    ( '0                  ),
+      .rr_i    ( 4'b0                  ),
       .req_i   ( fpr_clobber_vld[k]  ),
       .gnt_o   (                     ),
       .data_i  ( clobber_fu          ),
@@ -336,7 +336,7 @@ module scoreboard #(
     .clk_i   ( clk_i       ),
     .rst_ni  ( rst_ni      ),
     .flush_i ( 1'b0        ),
-    .rr_i    ( '0          ),
+    .rr_i    ( 4'b0          ),
     .req_i   ( rs1_fwd_req ),
     .gnt_o   (             ),
     .data_i  ( rs_data     ),
@@ -355,7 +355,7 @@ module scoreboard #(
     .clk_i   ( clk_i       ),
     .rst_ni  ( rst_ni      ),
     .flush_i ( 1'b0        ),
-    .rr_i    ( '0          ),
+    .rr_i    ( 4'b0          ),
     .req_i   ( rs2_fwd_req ),
     .gnt_o   (             ),
     .data_i  ( rs_data     ),
@@ -376,7 +376,7 @@ module scoreboard #(
     .clk_i   ( clk_i       ),
     .rst_ni  ( rst_ni      ),
     .flush_i ( 1'b0        ),
-    .rr_i    ( '0          ),
+    .rr_i    ( 4'b0          ),
     .req_i   ( rs3_fwd_req ),
     .gnt_o   (             ),
     .data_i  ( rs_data     ),

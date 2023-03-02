@@ -44,7 +44,11 @@ module ariane import ariane_pkg::*; #(
 `else
   // memory side, AXI Master
   output ariane_axi::req_t             axi_req_o,
-  input  ariane_axi::resp_t            axi_resp_i
+  input  ariane_axi::resp_t            axi_resp_i,
+`endif
+`ifdef CONTRACT
+  input logic enable_issue_i,
+  output logic issue_o,
 `endif
 );
 
@@ -72,10 +76,15 @@ module ariane import ariane_pkg::*; #(
     .cvxif_resp_i         ( cvxif_resp                ),
 `ifdef PITON_ARIANE
     .l15_req_o            ( l15_req_o                 ),
-    .l15_rtrn_i           ( l15_rtrn_i                )
+    .l15_rtrn_i           ( l15_rtrn_i                ),
 `else
     .axi_req_o            ( axi_req_o                 ),
-    .axi_resp_i           ( axi_resp_i                )
+    .axi_resp_i           ( axi_resp_i                ),
+`endif
+
+`ifdef CONTRACT
+    .enable_issue_i       ( enable_issue_i              ),
+    .issue_o              ( issue_o                     ),
 `endif
   );
 

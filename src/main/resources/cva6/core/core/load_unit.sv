@@ -62,15 +62,15 @@ module load_unit import ariane_pkg::*; #(
     // feed-through the virtual address for VA translation
     assign vaddr_o = lsu_ctrl_i.vaddr;
     // this is a read-only interface so set the write enable to 0
-    assign req_port_o.data_we = 1'b0;
-    assign req_port_o.data_wdata = '0;
+    assign req_port_n.data_we = 1'b0;
+    assign req_port_n.data_wdata = '0;
     // compose the queue data, control is handled in the FSM
     assign in_data = {lsu_ctrl_i.trans_id, lsu_ctrl_i.vaddr[riscv::XLEN_ALIGN_BYTES-1:0], lsu_ctrl_i.operator};
     // output address
     // we can now output the lower 12 bit as the index to the cache
-    assign req_port_o.address_index = lsu_ctrl_i.vaddr[ariane_pkg::DCACHE_INDEX_WIDTH-1:0];
+    assign req_port_n.address_index = lsu_ctrl_i.vaddr[ariane_pkg::DCACHE_INDEX_WIDTH-1:0];
     // translation from last cycle, again: control is handled in the FSM
-    assign req_port_o.address_tag   = paddr_i[ariane_pkg::DCACHE_TAG_WIDTH     +
+    assign req_port_n.address_tag   = paddr_i[ariane_pkg::DCACHE_TAG_WIDTH     +
                                               ariane_pkg::DCACHE_INDEX_WIDTH-1 :
                                               ariane_pkg::DCACHE_INDEX_WIDTH];
     // directly forward exception fields (valid bit is set below)
@@ -90,18 +90,40 @@ module load_unit import ariane_pkg::*; #(
     // ---------------
     // Load Control
     // ---------------
+
+    logic translation_req_n;
+    dcache_req_i_t req_port_n;
+    logic pop_ld_n;
+    logic valid_n;
+    logic [TRANS_ID_BITS-1:0] trans_id_n;
+    always_ff @(posedge clk_i or negedge rst_ni) begin
+      if (~rst_ni) begin
+        translation_req_o     <= 1'b0;
+        req_port_o <= '0;
+        pop_ld_o     <= 1'b0;
+        valid_o <= 1'b0;
+        trans_id_o     <= '0;
+      end else begin
+        translation_req_o     <= translation_req_n;
+        req_port_o <= req_port_n;
+        pop_ld_o <= pop_ld_n;
+        valid_o <= valid_n;
+        trans_id_o <= trans_id_n;
+      end
+    end
     always_comb begin : load_control
+    //always @(state_q, load_data_q, lsu_ctrl_i.be, lsu_ctrl_i.operator, valid_i, page_offset_matches_i, req_port_i.data_gnt, dtlb_hit_i, stall_ni, ex_i.valid, req_port_i.data_rvalid, pop_ld_o, flush_i) begin
         // default assignments
         state_d              = state_q;
         load_data_d          = load_data_q;
-        translation_req_o    = 1'b0;
-        req_port_o.data_req  = 1'b0;
+        translation_req_n    = 1'b0;
+        req_port_n.data_req  = 1'b0;
         // tag control
-        req_port_o.kill_req  = 1'b0;
-        req_port_o.tag_valid = 1'b0;
-        req_port_o.data_be   = lsu_ctrl_i.be;
-        req_port_o.data_size = extract_transfer_size(lsu_ctrl_i.operator);
-        pop_ld_o             = 1'b0;
+        req_port_n.kill_req  = 1'b0;
+        req_port_n.tag_valid = 1'b0;
+        req_port_n.data_be   = lsu_ctrl_i.be;
+        req_port_n.data_size = extract_transfer_size(lsu_ctrl_i.operator);
+        pop_ld_n             = 1'b0;
 
         case (state_q)
             IDLE: begin
@@ -109,11 +131,11 @@ module load_unit import ariane_pkg::*; #(
                 if (valid_i) begin
                     // start the translation process even though we do not know if the addresses match
                     // this should ease timing
-                    translation_req_o = 1'b1;
+                    translation_req_n = 1'b1;
                     // check if the page offset matches with a store, if it does then stall and wait
                     if (!page_offset_matches_i) begin
                         // make a load request to memory
-                        req_port_o.data_req = 1'b1;
+                        req_port_n.data_req = 1'b1;
                         // we got no data grant so wait for the grant before sending the tag
                         if (!req_port_i.data_gnt) begin
                             state_d = WAIT_GNT;
@@ -121,7 +143,7 @@ module load_unit import ariane_pkg::*; #(
                             if (dtlb_hit_i && !stall_ni) begin
                                 // we got a grant and a hit on the DTLB so we can send the tag in the next cycle
                                 state_d = SEND_TAG;
-                                pop_ld_o = 1'b1;
+                                pop_ld_n = 1'b1;
                             // translation valid but this is to NC and the WB is not yet empty.
                             end else if (dtlb_hit_i && stall_ni) begin
                                 state_d = ABORT_TRANSACTION_NI;
@@ -148,8 +170,8 @@ module load_unit import ariane_pkg::*; #(
             // we are here because of a TLB miss, we need to abort the current request and give way for the
             // PTW walker to satisfy the TLB miss
             ABORT_TRANSACTION, ABORT_TRANSACTION_NI: begin
-                req_port_o.kill_req  = 1'b1;
-                req_port_o.tag_valid = 1'b1;
+                req_port_n.kill_req  = 1'b1;
+                req_port_n.tag_valid = 1'b1;
                 // either re-do the request or wait until the WB is empty (depending on where we came from).
                 state_d = (state_q == ABORT_TRANSACTION_NI) ? WAIT_WB_EMPTY :  WAIT_TRANSLATION;
             end
@@ -161,7 +183,7 @@ module load_unit import ariane_pkg::*; #(
             end
 
             WAIT_TRANSLATION: begin
-                translation_req_o = 1'b1;
+                translation_req_n = 1'b1;
                 // we've got a hit and we can continue with the request process
                 if (dtlb_hit_i)
                     state_d = WAIT_GNT;
@@ -169,15 +191,15 @@ module load_unit import ariane_pkg::*; #(
 
             WAIT_GNT: begin
                 // keep the translation request up
-                translation_req_o = 1'b1;
+                translation_req_n = 1'b1;
                 // keep the request up
-                req_port_o.data_req = 1'b1;
+                req_port_n.data_req = 1'b1;
                 // we finally got a data grant
                 if (req_port_i.data_gnt) begin
                     // so we send the tag in the next cycle
                     if (dtlb_hit_i && !stall_ni) begin
                         state_d = SEND_TAG;
-                        pop_ld_o = 1'b1;
+                        pop_ld_n = 1'b1;
                     // translation valid but this is to NC and the WB is not yet empty.
                     end else if (dtlb_hit_i && stall_ni) begin
                         state_d = ABORT_TRANSACTION_NI;
@@ -190,17 +212,17 @@ module load_unit import ariane_pkg::*; #(
             end
             // we know for sure that the tag we want to send is valid
             SEND_TAG: begin
-                req_port_o.tag_valid = 1'b1;
+                req_port_n.tag_valid = 1'b1;
                 state_d = IDLE;
                 // we can make a new request here if we got one
                 if (valid_i) begin
                     // start the translation process even though we do not know if the addresses match
                     // this should ease timing
-                    translation_req_o = 1'b1;
+                    translation_req_n = 1'b1;
                     // check if the page offset matches with a store, if it does stall and wait
                     if (!page_offset_matches_i) begin
                         // make a load request to memory
-                        req_port_o.data_req = 1'b1;
+                        req_port_n.data_req = 1'b1;
                         // we got no data grant so wait for the grant before sending the tag
                         if (!req_port_i.data_gnt) begin
                             state_d = WAIT_GNT;
@@ -209,7 +231,7 @@ module load_unit import ariane_pkg::*; #(
                             if (dtlb_hit_i && !stall_ni) begin
                                 // we got a grant and a hit on the DTLB so we can send the tag in the next cycle
                                 state_d = SEND_TAG;
-                                pop_ld_o = 1'b1;
+                                pop_ld_n = 1'b1;
                             // translation valid but this is to NC and the WB is not yet empty.
                             end else if (dtlb_hit_i && stall_ni) begin
                                 state_d = ABORT_TRANSACTION_NI;
@@ -227,15 +249,15 @@ module load_unit import ariane_pkg::*; #(
                 // ----------
                 // if we got an exception we need to kill the request immediately
                 if (ex_i.valid) begin
-                    req_port_o.kill_req = 1'b1;
+                    req_port_n.kill_req = 1'b1;
                 end
             end
 
             WAIT_FLUSH: begin
                 // the D$ arbiter will take care of presenting this to the memory only in case we
                 // have an outstanding request
-                req_port_o.kill_req  = 1'b1;
-                req_port_o.tag_valid = 1'b1;
+                req_port_n.kill_req  = 1'b1;
+                req_port_n.tag_valid = 1'b1;
                 // we've killed the current request so we can go back to idle
                 state_d = IDLE;
             end
@@ -247,11 +269,11 @@ module load_unit import ariane_pkg::*; #(
             state_d = IDLE;
             // pop load - but only if we are not getting an rvalid in here - otherwise we will over-write an incoming transaction
             if (!req_port_i.data_rvalid)
-                pop_ld_o = 1'b1;
+                pop_ld_n = 1'b1;
         end
 
         // save the load data for later usage -> we should not clutter the load_data register
-        if (pop_ld_o && !ex_i.valid) begin
+        if (pop_ld_n && !ex_i.valid) begin
             load_data_d = in_data;
         end
 
@@ -266,20 +288,20 @@ module load_unit import ariane_pkg::*; #(
     // ---------------
     // decoupled rvalid process
     always_comb begin : rvalid_output
-        valid_o    = 1'b0;
+        valid_n    = 1'b0;
         ex_o.valid = 1'b0;
         // output the queue data directly, the valid signal is set corresponding to the process above
-        trans_id_o = load_data_q.trans_id;
+        trans_id_n = load_data_q.trans_id;
         // we got an rvalid and are currently not flushing and not aborting the request
         if (req_port_i.data_rvalid && state_q != WAIT_FLUSH) begin
             // we killed the request
-            if(!req_port_o.kill_req)
-                valid_o = 1'b1;
+            if(!req_port_n.kill_req)
+                valid_n = 1'b1;
             // the output is also valid if we got an exception. An exception arrives one cycle after
             // dtlb_hit_i is asserted, i.e. when we are in SEND_TAG. Otherwise, the exception
             // corresponds to the next request that is already being translated (see below).
             if (ex_i.valid && (state_q == SEND_TAG)) begin
-                valid_o    = 1'b1;
+                valid_n    = 1'b1;
                 ex_o.valid = 1'b1;
             end
         end
@@ -289,12 +311,12 @@ module load_unit import ariane_pkg::*; #(
         // so we simply check if we got an rvalid if so we prioritize it by not retiring the exception - we simply go for another
         // round in the load FSM
         if (valid_i && ex_i.valid && !req_port_i.data_rvalid) begin
-            valid_o    = 1'b1;
+            valid_n    = 1'b1;
             ex_o.valid = 1'b1;
-            trans_id_o = lsu_ctrl_i.trans_id;
+            trans_id_n = lsu_ctrl_i.trans_id;
         // if we are waiting for the translation to finish do not give a valid signal yet
         end else if (state_q == WAIT_TRANSLATION) begin
-            valid_o = 1'b0;
+            valid_n = 1'b0;
         end
     end
 
@@ -341,16 +363,16 @@ module load_unit import ariane_pkg::*; #(
     // prepare these signals for faster selection in the next cycle
     assign signed_d  = load_data_d.operator  inside {ariane_pkg::LW,  ariane_pkg::LH,  ariane_pkg::LB};
     assign fp_sign_d = load_data_d.operator  inside {ariane_pkg::FLW, ariane_pkg::FLH, ariane_pkg::FLB};
-    
+
     assign idx_d     = ((load_data_d.operator inside {ariane_pkg::LW,  ariane_pkg::FLW}) & riscv::IS_XLEN64) ? load_data_d.address_offset + 3 :
                        (load_data_d.operator inside {ariane_pkg::LH,  ariane_pkg::FLH}) ? load_data_d.address_offset + 1 :
                                                                                           load_data_d.address_offset;
 
 
     for (genvar i = 0; i < (riscv::XLEN/8); i++) begin : gen_sign_bits
-        assign sign_bits[i] = req_port_i.data_rdata[(i+1)*8-1]; 
+        assign sign_bits[i] = req_port_i.data_rdata[(i+1)*8-1];
     end
-    
+
 
     // select correct sign bit in parallel to result shifter above
     // pull to 0 if unsigned

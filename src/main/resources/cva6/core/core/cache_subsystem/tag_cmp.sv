@@ -15,11 +15,13 @@
 // Description: Arbitrates access to cache memories, simplified request grant protocol
 //              checks for hit or miss on cache
 //
+
+typedef std_cache_pkg::cache_line_t l_data_t;
+typedef std_cache_pkg::cl_be_t l_be_t;
+
 module tag_cmp #(
     parameter int unsigned NR_PORTS          = 3,
     parameter int unsigned ADDR_WIDTH        = 64,
-    parameter type l_data_t                  = std_cache_pkg::cache_line_t,
-    parameter type l_be_t                    = std_cache_pkg::cl_be_t,
     parameter int unsigned DCACHE_SET_ASSOC = 8
 ) (
     input  logic                                          clk_i,

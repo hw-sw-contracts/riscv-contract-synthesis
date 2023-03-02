@@ -21,7 +21,7 @@ module fpnew_opgroup_block #(
   parameter fpnew_pkg::fmt_unsigned_t   FmtPipeRegs   = '{default: 0},
   parameter fpnew_pkg::fmt_unit_types_t FmtUnitTypes  = '{default: fpnew_pkg::PARALLEL},
   parameter fpnew_pkg::pipe_config_t    PipeConfig    = fpnew_pkg::BEFORE,
-  parameter type                        TagType       = logic,
+  parameter int unsigned                TagType       = 1,
   // Do not change
   localparam int unsigned NUM_FORMATS  = fpnew_pkg::NUM_FP_FORMATS,
   localparam int unsigned NUM_OPERANDS = fpnew_pkg::num_operands(OpGroup)
@@ -38,7 +38,7 @@ module fpnew_opgroup_block #(
   input fpnew_pkg::fp_format_e                    dst_fmt_i,
   input fpnew_pkg::int_format_e                   int_fmt_i,
   input logic                                     vectorial_op_i,
-  input TagType                                   tag_i,
+  input logic [TagType:0]                         tag_i,
   // Input Handshake
   input  logic                                    in_valid_i,
   output logic                                    in_ready_o,
@@ -47,7 +47,7 @@ module fpnew_opgroup_block #(
   output logic [Width-1:0]                        result_o,
   output fpnew_pkg::status_t                      status_o,
   output logic                                    extension_bit_o,
-  output TagType                                  tag_o,
+  output logic [TagType:0]                        tag_o,
   // Output handshake
   output logic                                    out_valid_o,
   input  logic                                    out_ready_i,
@@ -55,6 +55,7 @@ module fpnew_opgroup_block #(
   output logic                                    busy_o
 );
 
+  typedef logic [TagType:0] TagType_t;
   // ----------------
   // Type Definition
   // ----------------
@@ -62,7 +63,7 @@ module fpnew_opgroup_block #(
     logic [Width-1:0]   result;
     fpnew_pkg::status_t status;
     logic               ext_bit;
-    TagType             tag;
+    logic [TagType:0]   tag;
   } output_t;
 
   // Handshake signals for the slices
@@ -132,7 +133,7 @@ module fpnew_opgroup_block #(
       assign fmt_outputs[fmt].result  = '{default: fpnew_pkg::DONT_CARE};
       assign fmt_outputs[fmt].status  = '{default: fpnew_pkg::DONT_CARE};
       assign fmt_outputs[fmt].ext_bit = fpnew_pkg::DONT_CARE;
-      assign fmt_outputs[fmt].tag     = TagType'(fpnew_pkg::DONT_CARE);
+      assign fmt_outputs[fmt].tag     = TagType_t'(fpnew_pkg::DONT_CARE);
 
     // Tie off disabled formats
     end else if (!FpFmtMask[fmt] || (FmtUnitTypes[fmt] == fpnew_pkg::DISABLED)) begin : disable_fmt
@@ -143,7 +144,7 @@ module fpnew_opgroup_block #(
       assign fmt_outputs[fmt].result  = '{default: fpnew_pkg::DONT_CARE};
       assign fmt_outputs[fmt].status  = '{default: fpnew_pkg::DONT_CARE};
       assign fmt_outputs[fmt].ext_bit = fpnew_pkg::DONT_CARE;
-      assign fmt_outputs[fmt].tag     = TagType'(fpnew_pkg::DONT_CARE);
+      assign fmt_outputs[fmt].tag     = TagType_t'(fpnew_pkg::DONT_CARE);
     end
   end
 
@@ -203,7 +204,7 @@ module fpnew_opgroup_block #(
   // Round-Robin arbiter to decide which result to use
   rr_arb_tree #(
     .NumIn     ( NUM_FORMATS ),
-    .DataType  ( output_t    ),
+    .DataType  ( $bits(output_t)-1),
     .AxiVldRdy ( 1'b1        )
   ) i_arbiter (
     .clk_i,

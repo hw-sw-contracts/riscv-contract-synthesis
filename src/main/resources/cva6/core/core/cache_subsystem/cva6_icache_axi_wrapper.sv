@@ -13,13 +13,14 @@
 // Description: wrapper module to connect the L1I$ to a 64bit AXI bus.
 //
 
+typedef ariane_axi::req_t axi_req_t;
+typedef ariane_axi::resp_t axi_rsp_t;
+
 module cva6_icache_axi_wrapper import ariane_pkg::*; import wt_cache_pkg::*; #(
   parameter ariane_cfg_t ArianeCfg = ArianeDefaultConfig,  // contains cacheable regions
   parameter int unsigned AxiAddrWidth = 0,
   parameter int unsigned AxiDataWidth = 0,
-  parameter int unsigned AxiIdWidth   = 0,
-  parameter type axi_req_t = ariane_axi::req_t,
-  parameter type axi_rsp_t = ariane_axi::resp_t
+  parameter int unsigned AxiIdWidth   = 0
 ) (
   input  logic              clk_i,
   input  logic              rst_ni,
@@ -127,9 +128,7 @@ module cva6_icache_axi_wrapper import ariane_pkg::*; import wt_cache_pkg::*; #(
     .AxiAddrWidth    ( AxiAddrWidth   ),
     .AxiDataWidth    ( AxiDataWidth   ),
     .AxiIdWidth      ( AxiIdWidth     ),
-    .AxiUserWidth    ( AXI_USER_WIDTH ),
-    .axi_req_t       ( axi_req_t      ),
-    .axi_rsp_t       ( axi_rsp_t      )
+    .AxiUserWidth    ( AXI_USER_WIDTH )
   ) i_axi_shim (
     .clk_i           ( clk_i             ),
     .rst_ni          ( rst_ni            ),
@@ -149,16 +148,16 @@ module cva6_icache_axi_wrapper import ariane_pkg::*; import wt_cache_pkg::*; #(
     .rd_exokay_o     ( axi_rd_exokay     ),
     .wr_req_i        ( '0                ),
     .wr_gnt_o        (                   ),
-    .wr_addr_i       ( '0                ),
-    .wr_data_i       ( '0                ),
-    .wr_user_i       ( '0                ),
-    .wr_be_i         ( '0                ),
-    .wr_blen_i       ( '0                ),
-    .wr_size_i       ( '0                ),
-    .wr_id_i         ( '0                ),
-    .wr_lock_i       ( '0                ),
-    .wr_atop_i       ( '0                ),
-    .wr_rdy_i        ( '0                ),
+    .wr_addr_i       ( 64'b0                ),
+    .wr_data_i       ( 128'b0                ),
+    .wr_user_i       ( 4'b0                ),
+    .wr_be_i         ( 16'b0                ),
+    .wr_blen_i       ( 1'b0                ),
+    .wr_size_i       ( 3'b0                ),
+    .wr_id_i         ( 4'b0                ),
+    .wr_lock_i       ( 1'b0                ),
+    .wr_atop_i       ( 6'b0                ),
+    .wr_rdy_i        ( 1'b0                ),
     .wr_valid_o      (                   ),
     .wr_id_o         (                   ),
     .wr_exokay_o     (                   ),

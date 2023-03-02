@@ -28,7 +28,7 @@
 
 module wt_dcache_mem import ariane_pkg::*; import wt_cache_pkg::*; #(
   parameter bit          AxiCompliant  = 1'b0, // set this to 1 when using in conjunction with AXI bus adapter
-  parameter int unsigned AxiDataWidth  = 0,
+  parameter int unsigned AxiDataWidth  = 64,
   parameter int unsigned NumPorts      = 3
 ) (
   input  logic                                              clk_i,
@@ -74,7 +74,7 @@ module wt_dcache_mem import ariane_pkg::*; import wt_cache_pkg::*; #(
 
   // number of bits needed to address AXI data. If AxiDataWidth equals XLEN this parameter
   // is not needed. Therefore, increment it by one to avoid reverse range select during elaboration.
-  localparam AXI_OFFSET_WIDTH = AxiDataWidth == riscv::XLEN ? $clog2(AxiDataWidth/8)+1 : $clog2(AxiDataWidth/8);
+  localparam AXI_OFFSET_WIDTH = 3; //AxiDataWidth == riscv::XLEN ? $clog2(AxiDataWidth/8)+1 : $clog2(AxiDataWidth/8);
 
   logic [DCACHE_NUM_BANKS-1:0]                                             bank_req;
   logic [DCACHE_NUM_BANKS-1:0]                                             bank_we;
@@ -154,10 +154,10 @@ module wt_dcache_mem import ariane_pkg::*; import wt_cache_pkg::*; #(
     .clk_i  (clk_i   ),
     .rst_ni (rst_ni  ),
     .flush_i('0      ),
-    .rr_i   ('0      ),
+    .rr_i   (2'b0      ),
     .req_i  (rd_req_masked ),
     .gnt_o  (rd_ack_o      ),
-    .data_i ('0            ),
+    .data_i (3'b0            ),
     .gnt_i  (~wr_cl_vld_i  ),
     .req_o  (rd_req        ),
     .data_o (              ),
@@ -318,7 +318,7 @@ module wt_dcache_mem import ariane_pkg::*; import wt_cache_pkg::*; #(
       .addr_i    ( vld_addr            ),
       .wuser_i   ( '0                  ),
       .wdata_i   ( {vld_wdata[i], wr_cl_tag_i} ),
-      .be_i      ( '1                  ),
+      .be_i      ( 3'b1                  ),
       .ruser_o   (                     ),
       .rdata_o   ( vld_tag_rdata[i]    )
     );

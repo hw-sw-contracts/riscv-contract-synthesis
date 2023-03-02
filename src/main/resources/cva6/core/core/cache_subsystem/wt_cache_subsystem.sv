@@ -18,14 +18,14 @@
 //              with a standard 64 bit AXI interface instead of the OpenPiton
 //              L1.5 interface.
 
+typedef ariane_axi::req_t axi_req_t;
+typedef ariane_axi::resp_t axi_rsp_t;
 
 module wt_cache_subsystem import ariane_pkg::*; import wt_cache_pkg::*; #(
   parameter ariane_pkg::ariane_cfg_t ArianeCfg       = ariane_pkg::ArianeDefaultConfig,  // contains cacheable regions
-  parameter int unsigned AxiAddrWidth = 0,
-  parameter int unsigned AxiDataWidth = 0,
-  parameter int unsigned AxiIdWidth   = 0,
-  parameter type axi_req_t = ariane_axi::req_t,
-  parameter type axi_rsp_t = ariane_axi::resp_t
+  parameter int unsigned AxiAddrWidth = 64,
+  parameter int unsigned AxiDataWidth = 64,
+  parameter int unsigned AxiIdWidth   = 4
 ) (
   input logic                            clk_i,
   input logic                            rst_ni,
@@ -156,9 +156,7 @@ module wt_cache_subsystem import ariane_pkg::*; import wt_cache_pkg::*; #(
   wt_axi_adapter #(
     .AxiAddrWidth       ( AxiAddrWidth ),
     .AxiDataWidth       ( AxiDataWidth ),
-    .AxiIdWidth         ( AxiIdWidth ),
-    .axi_req_t          ( axi_req_t ),
-    .axi_rsp_t          ( axi_rsp_t )
+    .AxiIdWidth         ( AxiIdWidth )
   ) i_adapter (
     .clk_i              ( clk_i                   ),
     .rst_ni             ( rst_ni                  ),
