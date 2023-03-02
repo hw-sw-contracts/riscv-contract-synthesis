@@ -1,12 +1,9 @@
 package contractgen.simple.march.pipeline;
 
-import contractgen.Counterexample;
-import contractgen.Instruction;
-import contractgen.TestCase;
-import contractgen.TestCases;
+import contractgen.*;
 import contractgen.simple.isa.SimpleInstruction;
 import contractgen.simple.isa.contract.SIMPLE_OBSERVATION_TYPE;
-import contractgen.simple.isa.contract.SimpleCounterexample;
+import contractgen.simple.isa.contract.SimpleTestResult;
 import contractgen.simple.isa.contract.SimpleObservation;
 import contractgen.simple.march.singleycycle.SimpleMARCH;
 import contractgen.util.Pair;
@@ -23,13 +20,13 @@ import static contractgen.util.ScriptUtils.runScript;
 
 public class SimplePipelineMARCH extends SimpleMARCH {
 
-    public SimplePipelineMARCH(TestCases testCases) {
-        super(testCases);
+    public SimplePipelineMARCH(Updater updater, TestCases testCases) {
+        super(updater, testCases);
         ADDITIONAL_DEFINITIONS = "--define=PIPELINE";
     }
 
     @Override
-    public Pair<Counterexample, Counterexample> extractCTX(TestCase testCase) {
+    public Pair<TestResult, TestResult> extractCTX(TestCase testCase) {
         VcdFile ctx;
         try {
             ctx = new VcdFile(Files.readString(Path.of(BASE_PATH + "/syn/run/verif/engine_0/trace.vcd")));
@@ -37,10 +34,10 @@ public class SimplePipelineMARCH extends SimpleMARCH {
             throw new RuntimeException(e);
         }
         Pair<Pair<Instruction, Integer>, Pair<Instruction, Integer>> c = findInstructionsPipeline(ctx, testCase);
-        SimpleInstruction instr_1 = (SimpleInstruction) c.getLeft().getLeft();
-        Integer fetch_1 = c.getLeft().getRight();
-        SimpleInstruction instr_2 = (SimpleInstruction) c.getRight().getLeft();
-        Integer fetch_2 = c.getRight().getRight();
+        SimpleInstruction instr_1 = (SimpleInstruction) c.left().left();
+        Integer fetch_1 = c.left().right();
+        SimpleInstruction instr_2 = (SimpleInstruction) c.right().left();
+        Integer fetch_2 = c.right().right();
 
 
         // find possible contract templates
@@ -72,7 +69,7 @@ public class SimplePipelineMARCH extends SimpleMARCH {
             differences_1.add(new SimpleObservation(instr_1.getType(), SIMPLE_OBSERVATION_TYPE.REG_RS2));
             differences_2.add(new SimpleObservation(instr_2.getType(), SIMPLE_OBSERVATION_TYPE.REG_RS2));
         }
-        return new Pair<>(new SimpleCounterexample(differences_1), new SimpleCounterexample(differences_2));
+        return new Pair<>(new SimpleTestResult(differences_1, true), new SimpleTestResult(differences_2, true));
     }
 
     private Pair<Pair<Instruction, Integer>, Pair<Instruction, Integer>> findInstructionsPipeline(VcdFile ctx, TestCase testCase) {
@@ -109,5 +106,8 @@ public class SimplePipelineMARCH extends SimpleMARCH {
         return new Pair<>(new Pair<>(instr_1, fetch_1), new Pair<>(instr_2, fetch_2));
     }
 
-
+    @Override
+    public String getName() {
+        return "simple-pipeline";
+    }
 }

@@ -24,9 +24,13 @@ public abstract class MARCH {
 
     public abstract boolean run(int steps);
 
-    public abstract Pair<Counterexample, Counterexample> extractCTX(TestCase testCase);
+    public abstract Pair<TestResult, TestResult> extractCTX(TestCase testCase);
 
-    public abstract Pair<Counterexample, Counterexample> extractCTX(int id, TestCase testCase);
+    public abstract Pair<TestResult, TestResult> extractCTX(int id, TestCase testCase);
+
+    public abstract Pair<TestResult, TestResult> extractDifferences();
+
+    public abstract Pair<TestResult, TestResult> extractDifferences(int id);
 
     public abstract void compile();
 
@@ -37,4 +41,6 @@ public abstract class MARCH {
     public abstract boolean simulate();
 
     public abstract boolean simulate(int id);
+
+    public abstract String getName();
 }

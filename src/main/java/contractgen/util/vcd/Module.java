@@ -9,8 +9,8 @@ public class Module {
     private final String name;
 
     private final Module parent;
-    private Map<String, Module> children = new HashMap<>();
-    private Map<String, Wire> wireSet = new HashMap<>();
+    private final Map<String, Module> children = new HashMap<>();
+    private final Map<String, Wire> wireSet = new HashMap<>();
 
     public Module(Module parent, String name) {
         this.parent = parent;

@@ -3,7 +3,8 @@ package contractgen.riscv.ibex;
 import contractgen.*;
 import contractgen.riscv.isa.RISCV;
 import contractgen.riscv.isa.RISCVInstruction;
-import contractgen.riscv.isa.contract.RISCVCounterexample;
+import contractgen.riscv.isa.RISCV_TYPE;
+import contractgen.riscv.isa.contract.RISCVTestResult;
 import contractgen.riscv.isa.contract.RISCVObservation;
 import contractgen.riscv.isa.contract.RISCV_OBSERVATION_TYPE;
 import contractgen.util.Pair;
@@ -26,12 +27,13 @@ import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 
 public class IBEX extends MARCH {
 
-    private static final String TEMPLATE_PATH = "/home/yosys/bachelor/ibex_iverilog_template/";
-    protected String BASE_PATH = "/home/yosys/bachelor/ibex_iverilog_generated/";
-    protected String SIMULATION_PATH = "/home/yosys/bachelor/ibex_iverilog_simulation/";
+    private static final String TEMPLATE_PATH = "/home/yosys/resources/ibex/";
+    protected String BASE_PATH = "/home/yosys/output/ibex/generated/";
+    protected String COMPILATION_PATH = "/home/yosys/output/ibex/compiled/";
+    protected String SIMULATION_PATH = "/home/yosys/output/ibex/simulation/";
 
-    public IBEX(TestCases testCases) {
-        super(new RISCV(testCases));
+    public IBEX(Updater updater, TestCases testCases) {
+        super(new RISCV(updater, testCases));
     }
 
     @Override
@@ -55,17 +57,17 @@ public class IBEX extends MARCH {
     }
 
     @Override
-    public Pair<Counterexample, Counterexample> extractCTX(TestCase testCase) {
+    public Pair<TestResult, TestResult> extractCTX(TestCase testCase) {
         return extractCTX(SIMULATION_PATH, testCase);
     }
 
     @Override
-    public Pair<Counterexample, Counterexample> extractCTX(int id, TestCase testCase) {
+    public Pair<TestResult, TestResult> extractCTX(int id, TestCase testCase) {
         return extractCTX(SIMULATION_PATH + id + "/", testCase);
     }
 
 
-    public Pair<Counterexample, Counterexample> extractCTX(String PATH, TestCase testCase) {
+    public Pair<TestResult, TestResult> extractCTX(String PATH, TestCase testCase) {
         // TODO
         //if (testCase.getLikelyCTX() != null) {
         //    return new Pair<>(testCase.getLikelyCTX(), testCase.getLikelyCTX());
@@ -99,7 +101,7 @@ public class IBEX extends MARCH {
         assert fetch_1_count != null;
         assert fetch_2_count != null;
         currentGuess = Integer.parseInt(fetch_1_count.getValueAt(fetch_1_count.getLastChangeTime()), 2);
-        while (currentGuess > 0 && (obs1.isEmpty() || obs2.isEmpty())) {
+        while (currentGuess > 0) { // && (obs1.isEmpty() || obs2.isEmpty())) {
             //System.out.println("Looking at time " + fetch_1_count.getFirstTimeValue(StringUtils.toBinaryEncoding((long) currentGuess)));
             //RISCVInstruction instr_1 = RISCVInstruction.parseBinaryString(vcd.getTop().getChild("ctr").getWire("instr_1_i").getValueAt(retire_count.getFirstTimeValue(StringUtils.toBinaryEncoding((long) currentGuess))));
             //RISCVInstruction instr_2 = RISCVInstruction.parseBinaryString(vcd.getTop().getChild("ctr").getWire("instr_2_i").getValueAt(retire_count.getFirstTimeValue(StringUtils.toBinaryEncoding((long) currentGuess))));
@@ -109,57 +111,66 @@ public class IBEX extends MARCH {
             //System.out.println(instr_1);
             assert instr_2 != null;
             //System.out.println(instr_2);
-            String regfile_1 = vcd.getTop().getChild("ctr").getWire("regfile_1_i").getValueAt(retire_count.getFirstTimeValue(StringUtils.toBinaryEncoding((long) currentGuess)));
-            String regfile_2 = vcd.getTop().getChild("ctr").getWire("regfile_2_i").getValueAt(retire_count.getFirstTimeValue(StringUtils.toBinaryEncoding((long) currentGuess)));
+            String regfile_1 = vcd.getTop().getChild("ctr").getWire("regfile_1_i").getValueAt(retire_count.getFirstTimeValue(StringUtils.toBinaryEncoding((long) currentGuess)) - 20);
+            String regfile_2 = vcd.getTop().getChild("ctr").getWire("regfile_2_i").getValueAt(retire_count.getFirstTimeValue(StringUtils.toBinaryEncoding((long) currentGuess)) - 20);
             assert regfile_1 != null;
             assert regfile_2 != null;
-            String mem_addr_1 = vcd.getTop().getChild("ctr").getWire("mem_addr_1_i").getValueAt(retire_count.getFirstTimeValue(StringUtils.toBinaryEncoding((long) currentGuess)));
-            String mem_addr_2 = vcd.getTop().getChild("ctr").getWire("mem_addr_2_i").getValueAt(retire_count.getFirstTimeValue(StringUtils.toBinaryEncoding((long) currentGuess)));
+            String mem_addr_1 = vcd.getTop().getChild("ctr").getWire("mem_addr_1_i").getValueAt(retire_count.getFirstTimeValue(StringUtils.toBinaryEncoding((long) currentGuess)) - 20);
+            String mem_addr_2 = vcd.getTop().getChild("ctr").getWire("mem_addr_2_i").getValueAt(retire_count.getFirstTimeValue(StringUtils.toBinaryEncoding((long) currentGuess)) - 20);
             assert mem_addr_1 != null;
             assert mem_addr_2 != null;
-            String mem_data_1 = vcd.getTop().getChild("ctr").getWire("mem_data_1_i").getValueAt(retire_count.getFirstTimeValue(StringUtils.toBinaryEncoding((long) currentGuess)));
-            String mem_data_2 = vcd.getTop().getChild("ctr").getWire("mem_data_2_i").getValueAt(retire_count.getFirstTimeValue(StringUtils.toBinaryEncoding((long) currentGuess)));
+            String mem_data_1 = vcd.getTop().getChild("ctr").getWire("mem_data_1_i").getValueAt(retire_count.getFirstTimeValue(StringUtils.toBinaryEncoding((long) currentGuess)) - 20);
+            String mem_data_2 = vcd.getTop().getChild("ctr").getWire("mem_data_2_i").getValueAt(retire_count.getFirstTimeValue(StringUtils.toBinaryEncoding((long) currentGuess)) - 20);
             assert mem_data_1 != null;
             assert mem_data_2 != null;
 
-
-            if (!Objects.equals(instr_1.getType(), instr_2.getType())) {
-                throw new IllegalStateException("Why?" + instr_1 + instr_2);
-                //obs1.add(new RISCVObservation(instr_1.getType(), RISCV_OBSERVATION_TYPE.OPCODE));
-                //obs2.add(new RISCVObservation(instr_2.getType(), RISCV_OBSERVATION_TYPE.OPCODE));
+            if (instr_1.type() == RISCV_TYPE.JALR && instr_1.imm() == 3946 && instr_1.rd() == 12) {
+                System.out.println("Strange case here:");
+                System.out.println(getRegisterValue(regfile_1, instr_1.rs1()));
+                System.out.println(getRegisterValue(regfile_2, instr_2.rs1()));
+                System.out.println("Value -20 was " + (retire_count.getFirstTimeValue(StringUtils.toBinaryEncoding((long) currentGuess)) - 20));
+                System.out.println(regfile_1);
+                System.out.println(regfile_2);
             }
 
-            if (!Objects.equals(instr_1.getRd(), instr_2.getRd())) {
-                obs1.add(new RISCVObservation(instr_1.getType(), RISCV_OBSERVATION_TYPE.RD));
-                obs2.add(new RISCVObservation(instr_2.getType(), RISCV_OBSERVATION_TYPE.RD));
+
+            if (!Objects.equals(instr_1.type(), instr_2.type())) {
+                //throw new IllegalStateException("Why?" + instr_1 + instr_2);
+                obs1.add(new RISCVObservation(instr_1.type(), RISCV_OBSERVATION_TYPE.OPCODE));
+                obs2.add(new RISCVObservation(instr_2.type(), RISCV_OBSERVATION_TYPE.OPCODE));
             }
-            if (!Objects.equals(instr_1.getRs1(), instr_2.getRs1())) {
-                obs1.add(new RISCVObservation(instr_1.getType(), RISCV_OBSERVATION_TYPE.RS1));
-                obs2.add(new RISCVObservation(instr_2.getType(), RISCV_OBSERVATION_TYPE.RS1));
+
+            if (!Objects.equals(instr_1.rd(), instr_2.rd())) {
+                obs1.add(new RISCVObservation(instr_1.type(), RISCV_OBSERVATION_TYPE.RD));
+                obs2.add(new RISCVObservation(instr_2.type(), RISCV_OBSERVATION_TYPE.RD));
             }
-            if (!Objects.equals(instr_1.getRs2(), instr_2.getRs2())) {
-                obs1.add(new RISCVObservation(instr_1.getType(), RISCV_OBSERVATION_TYPE.RS2));
-                obs2.add(new RISCVObservation(instr_2.getType(), RISCV_OBSERVATION_TYPE.RS2));
+            if (!Objects.equals(instr_1.rs1(), instr_2.rs1())) {
+                obs1.add(new RISCVObservation(instr_1.type(), RISCV_OBSERVATION_TYPE.RS1));
+                obs2.add(new RISCVObservation(instr_2.type(), RISCV_OBSERVATION_TYPE.RS1));
             }
-            if (!Objects.equals(instr_1.getImm(), instr_2.getImm())) {
-                obs1.add(new RISCVObservation(instr_1.getType(), RISCV_OBSERVATION_TYPE.IMM));
-                obs2.add(new RISCVObservation(instr_2.getType(), RISCV_OBSERVATION_TYPE.IMM));
+            if (!Objects.equals(instr_1.rs2(), instr_2.rs2())) {
+                obs1.add(new RISCVObservation(instr_1.type(), RISCV_OBSERVATION_TYPE.RS2));
+                obs2.add(new RISCVObservation(instr_2.type(), RISCV_OBSERVATION_TYPE.RS2));
             }
-            if (!Objects.equals(getRegisterValue(regfile_1, instr_1.getRs1()), getRegisterValue(regfile_2, instr_2.getRs1()))) {
-                obs1.add(new RISCVObservation(instr_1.getType(), RISCV_OBSERVATION_TYPE.REG_RS1));
-                obs2.add(new RISCVObservation(instr_2.getType(), RISCV_OBSERVATION_TYPE.REG_RS1));
+            if (!Objects.equals(instr_1.imm(), instr_2.imm())) {
+                obs1.add(new RISCVObservation(instr_1.type(), RISCV_OBSERVATION_TYPE.IMM));
+                obs2.add(new RISCVObservation(instr_2.type(), RISCV_OBSERVATION_TYPE.IMM));
             }
-            if (!Objects.equals(getRegisterValue(regfile_1, instr_1.getRs2()), getRegisterValue(regfile_2, instr_2.getRs2()))) {
-                obs1.add(new RISCVObservation(instr_1.getType(), RISCV_OBSERVATION_TYPE.REG_RS2));
-                obs2.add(new RISCVObservation(instr_2.getType(), RISCV_OBSERVATION_TYPE.REG_RS2));
+            if (!Objects.equals(getRegisterValue(regfile_1, instr_1.rs1()), getRegisterValue(regfile_2, instr_2.rs1()))) {
+                obs1.add(new RISCVObservation(instr_1.type(), RISCV_OBSERVATION_TYPE.REG_RS1));
+                obs2.add(new RISCVObservation(instr_2.type(), RISCV_OBSERVATION_TYPE.REG_RS1));
             }
-            if (!Objects.equals(getMemoryValue(mem_addr_1, mem_data_1, getRegisterValue(regfile_1, instr_1.getRs1())), getMemoryValue(mem_addr_2, mem_data_2, getRegisterValue(regfile_2, instr_2.getRs1())))) {
-                obs1.add(new RISCVObservation(instr_1.getType(), RISCV_OBSERVATION_TYPE.MEM_RS1));
-                obs2.add(new RISCVObservation(instr_2.getType(), RISCV_OBSERVATION_TYPE.MEM_RS1));
+            if (!Objects.equals(getRegisterValue(regfile_1, instr_1.rs2()), getRegisterValue(regfile_2, instr_2.rs2()))) {
+                obs1.add(new RISCVObservation(instr_1.type(), RISCV_OBSERVATION_TYPE.REG_RS2));
+                obs2.add(new RISCVObservation(instr_2.type(), RISCV_OBSERVATION_TYPE.REG_RS2));
             }
-            if (!Objects.equals(getMemoryValue(mem_addr_1, mem_data_1, getRegisterValue(regfile_1, instr_1.getRs2())), getMemoryValue(mem_addr_2, mem_data_2, getRegisterValue(regfile_2, instr_2.getRs2())))) {
-                obs1.add(new RISCVObservation(instr_1.getType(), RISCV_OBSERVATION_TYPE.MEM_RS2));
-                obs2.add(new RISCVObservation(instr_2.getType(), RISCV_OBSERVATION_TYPE.MEM_RS2));
+            if (!Objects.equals(getMemoryValue(mem_addr_1, mem_data_1, getRegisterValue(regfile_1, instr_1.rs1())), getMemoryValue(mem_addr_2, mem_data_2, getRegisterValue(regfile_2, instr_2.rs1())))) {
+                obs1.add(new RISCVObservation(instr_1.type(), RISCV_OBSERVATION_TYPE.MEM_RS1));
+                obs2.add(new RISCVObservation(instr_2.type(), RISCV_OBSERVATION_TYPE.MEM_RS1));
+            }
+            if (!Objects.equals(getMemoryValue(mem_addr_1, mem_data_1, getRegisterValue(regfile_1, instr_1.rs2())), getMemoryValue(mem_addr_2, mem_data_2, getRegisterValue(regfile_2, instr_2.rs2())))) {
+                obs1.add(new RISCVObservation(instr_1.type(), RISCV_OBSERVATION_TYPE.MEM_RS2));
+                obs2.add(new RISCVObservation(instr_2.type(), RISCV_OBSERVATION_TYPE.MEM_RS2));
             }
 
             currentGuess--;
@@ -169,7 +180,111 @@ public class IBEX extends MARCH {
             throw new IllegalStateException("Something went wrong here...");
         }
 
-        return new Pair<>(new RISCVCounterexample(obs1), new RISCVCounterexample(obs2));
+        if (obs1.size() == 1 && obs1.contains(new RISCVObservation(RISCV_TYPE.ADDI, RISCV_OBSERVATION_TYPE.IMM))) {
+            System.out.println(testCase);
+            System.out.println(PATH);
+            throw new IllegalStateException("What is going on?!");
+        }
+
+        return new Pair<>(new RISCVTestResult(obs1, true), new RISCVTestResult(obs2, true));
+    }
+
+    @Override
+    public Pair<TestResult, TestResult> extractDifferences() {
+        return extractDifferences(SIMULATION_PATH);
+    }
+
+    @Override
+    public Pair<TestResult, TestResult> extractDifferences(int id) {
+        return extractDifferences(SIMULATION_PATH + id + "/");
+    }
+
+    public Pair<TestResult, TestResult> extractDifferences(String PATH) {
+        VcdFile vcd;
+        try {
+            vcd = new VcdFile(Files.readString(Path.of(PATH + "sim.vcd")));
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        Set<RISCVObservation> obs1 = new HashSet<>();
+        Set<RISCVObservation> obs2 = new HashSet<>();
+        Wire retire_count = vcd.getTop().getChild("control").getWire("retire_count");
+        Wire fetch_1_count = vcd.getTop().getChild("control").getWire("fetch_1_count");
+        Wire fetch_2_count = vcd.getTop().getChild("control").getWire("fetch_2_count");
+        assert fetch_1_count != null;
+        assert fetch_2_count != null;
+        int currentGuess = Integer.parseInt(retire_count.getValueAt(retire_count.getLastChangeTime()), 2);
+        while (currentGuess > 0) {
+            //System.out.println("Looking at time " + fetch_1_count.getFirstTimeValue(StringUtils.toBinaryEncoding((long) currentGuess)));
+            //RISCVInstruction instr_1 = RISCVInstruction.parseBinaryString(vcd.getTop().getChild("ctr").getWire("instr_1_i").getValueAt(retire_count.getFirstTimeValue(StringUtils.toBinaryEncoding((long) currentGuess))));
+            //RISCVInstruction instr_2 = RISCVInstruction.parseBinaryString(vcd.getTop().getChild("ctr").getWire("instr_2_i").getValueAt(retire_count.getFirstTimeValue(StringUtils.toBinaryEncoding((long) currentGuess))));
+            RISCVInstruction instr_1 = RISCVInstruction.parseBinaryString(vcd.getTop().getChild("instr_mem_1").getWire("instr_o").getValueAt(fetch_1_count.getFirstTimeValue(StringUtils.toBinaryEncoding((long) currentGuess))));
+            RISCVInstruction instr_2 = RISCVInstruction.parseBinaryString(vcd.getTop().getChild("instr_mem_2").getWire("instr_o").getValueAt(fetch_2_count.getFirstTimeValue(StringUtils.toBinaryEncoding((long) currentGuess))));
+            assert instr_1 != null;
+            //System.out.println(instr_1);
+            assert instr_2 != null;
+            //System.out.println(instr_2);
+            String regfile_1 = vcd.getTop().getChild("ctr").getWire("regfile_1_i").getValueAt(retire_count.getFirstTimeValue(StringUtils.toBinaryEncoding((long) currentGuess)) - 20);
+            String regfile_2 = vcd.getTop().getChild("ctr").getWire("regfile_2_i").getValueAt(retire_count.getFirstTimeValue(StringUtils.toBinaryEncoding((long) currentGuess)) - 20);
+            assert regfile_1 != null;
+            assert regfile_2 != null;
+            String mem_addr_1 = vcd.getTop().getChild("ctr").getWire("mem_addr_1_i").getValueAt(retire_count.getFirstTimeValue(StringUtils.toBinaryEncoding((long) currentGuess)) - 20);
+            String mem_addr_2 = vcd.getTop().getChild("ctr").getWire("mem_addr_2_i").getValueAt(retire_count.getFirstTimeValue(StringUtils.toBinaryEncoding((long) currentGuess)) - 20);
+            assert mem_addr_1 != null;
+            assert mem_addr_2 != null;
+            String mem_data_1 = vcd.getTop().getChild("ctr").getWire("mem_data_1_i").getValueAt(retire_count.getFirstTimeValue(StringUtils.toBinaryEncoding((long) currentGuess)) - 20);
+            String mem_data_2 = vcd.getTop().getChild("ctr").getWire("mem_data_2_i").getValueAt(retire_count.getFirstTimeValue(StringUtils.toBinaryEncoding((long) currentGuess)) - 20);
+            assert mem_data_1 != null;
+            assert mem_data_2 != null;
+
+
+            if (!Objects.equals(instr_1.type(), instr_2.type())) {
+                //throw new IllegalStateException("Why?" + instr_1 + instr_2);
+                obs1.add(new RISCVObservation(instr_1.type(), RISCV_OBSERVATION_TYPE.OPCODE));
+                obs2.add(new RISCVObservation(instr_2.type(), RISCV_OBSERVATION_TYPE.OPCODE));
+            }
+
+            if (!Objects.equals(instr_1.rd(), instr_2.rd())) {
+                obs1.add(new RISCVObservation(instr_1.type(), RISCV_OBSERVATION_TYPE.RD));
+                obs2.add(new RISCVObservation(instr_2.type(), RISCV_OBSERVATION_TYPE.RD));
+            }
+            if (!Objects.equals(instr_1.rs1(), instr_2.rs1())) {
+                obs1.add(new RISCVObservation(instr_1.type(), RISCV_OBSERVATION_TYPE.RS1));
+                obs2.add(new RISCVObservation(instr_2.type(), RISCV_OBSERVATION_TYPE.RS1));
+            }
+            if (!Objects.equals(instr_1.rs2(), instr_2.rs2())) {
+                obs1.add(new RISCVObservation(instr_1.type(), RISCV_OBSERVATION_TYPE.RS2));
+                obs2.add(new RISCVObservation(instr_2.type(), RISCV_OBSERVATION_TYPE.RS2));
+            }
+            if (!Objects.equals(instr_1.imm(), instr_2.imm())) {
+                obs1.add(new RISCVObservation(instr_1.type(), RISCV_OBSERVATION_TYPE.IMM));
+                obs2.add(new RISCVObservation(instr_2.type(), RISCV_OBSERVATION_TYPE.IMM));
+            }
+            if (!Objects.equals(getRegisterValue(regfile_1, instr_1.rs1()), getRegisterValue(regfile_2, instr_2.rs1()))) {
+                obs1.add(new RISCVObservation(instr_1.type(), RISCV_OBSERVATION_TYPE.REG_RS1));
+                obs2.add(new RISCVObservation(instr_2.type(), RISCV_OBSERVATION_TYPE.REG_RS1));
+            }
+            if (!Objects.equals(getRegisterValue(regfile_1, instr_1.rs2()), getRegisterValue(regfile_2, instr_2.rs2()))) {
+                obs1.add(new RISCVObservation(instr_1.type(), RISCV_OBSERVATION_TYPE.REG_RS2));
+                obs2.add(new RISCVObservation(instr_2.type(), RISCV_OBSERVATION_TYPE.REG_RS2));
+            }
+            if (!Objects.equals(getMemoryValue(mem_addr_1, mem_data_1, getRegisterValue(regfile_1, instr_1.rs1())), getMemoryValue(mem_addr_2, mem_data_2, getRegisterValue(regfile_2, instr_2.rs1())))) {
+                obs1.add(new RISCVObservation(instr_1.type(), RISCV_OBSERVATION_TYPE.MEM_RS1));
+                obs2.add(new RISCVObservation(instr_2.type(), RISCV_OBSERVATION_TYPE.MEM_RS1));
+            }
+            if (!Objects.equals(getMemoryValue(mem_addr_1, mem_data_1, getRegisterValue(regfile_1, instr_1.rs2())), getMemoryValue(mem_addr_2, mem_data_2, getRegisterValue(regfile_2, instr_2.rs2())))) {
+                obs1.add(new RISCVObservation(instr_1.type(), RISCV_OBSERVATION_TYPE.MEM_RS2));
+                obs2.add(new RISCVObservation(instr_2.type(), RISCV_OBSERVATION_TYPE.MEM_RS2));
+            }
+
+            currentGuess--;
+        }
+
+        //if (obs1.isEmpty() && obs2.isEmpty()) {
+        //    throw new IllegalStateException("Something went wrong here...");
+        //}
+
+        return new Pair<>(new RISCVTestResult(obs1, false), new RISCVTestResult(obs2, false));
     }
 
     private Long getRegisterValue(String regfile, Integer number) {
@@ -205,9 +320,8 @@ public class IBEX extends MARCH {
         synchronized (getISA().getContract()) {
             replaceString(BASE_PATH + "verif/ctr.sv", "/* CONTRACT */", getISA().getContract().printContract());
         }
-        replaceString(BASE_PATH + "verif/compile.sh", "/* BASE DIR */", BASE_PATH + "verif/");
-        replaceString(BASE_PATH + "verif/compile.sh", "/* OUT DIR */", BASE_PATH + "out/");
-        runScript(BASE_PATH + "verif/compile.sh", false);
+        runScript("/bin/bash " + BASE_PATH + "compile.sh " + BASE_PATH + " " + COMPILATION_PATH, false);
+        System.out.println("Compilation finished.");
     }
 
     @Override
@@ -222,7 +336,7 @@ public class IBEX extends MARCH {
 
     public void writeTestCase(String PATH, TestCase testCase) {
         try {
-            copyFileOrFolder(Path.of(BASE_PATH + "out/ibex").toFile(), Path.of(PATH + "ibex").toFile(), REPLACE_EXISTING);
+            copyFileOrFolder(Path.of(COMPILATION_PATH + "ibex").toFile(), Path.of(PATH + "ibex").toFile(), REPLACE_EXISTING);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -245,6 +359,11 @@ public class IBEX extends MARCH {
     @Override
     public boolean simulate(int id) {
         return simulate(SIMULATION_PATH + id + "/");
+    }
+
+    @Override
+    public String getName() {
+        return "ibex";
     }
 
     public boolean simulate(String PATH) {

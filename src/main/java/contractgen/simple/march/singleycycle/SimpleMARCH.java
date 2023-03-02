@@ -4,7 +4,7 @@ import contractgen.*;
 import contractgen.simple.isa.SimpleISA;
 import contractgen.simple.isa.SimpleInstruction;
 import contractgen.simple.isa.contract.SIMPLE_OBSERVATION_TYPE;
-import contractgen.simple.isa.contract.SimpleCounterexample;
+import contractgen.simple.isa.contract.SimpleTestResult;
 import contractgen.simple.isa.contract.SimpleObservation;
 import contractgen.util.Pair;
 import contractgen.util.vcd.VcdFile;
@@ -25,14 +25,17 @@ import static contractgen.util.FileUtils.replaceString;
 import static contractgen.util.ScriptUtils.runScript;
 
 public
+
+
+
 class SimpleMARCH extends MARCH {
 
     private static final String TEMPLATE_PATH = "/home/yosys/bachelor/simple_proc_template/";
     protected String BASE_PATH = "/home/yosys/bachelor/simple_proc_generated/";
     protected String ADDITIONAL_DEFINITIONS = "";
 
-    public SimpleMARCH(TestCases testCases) {
-        super(new SimpleISA(testCases));
+    public SimpleMARCH(Updater updater, TestCases testCases) {
+        super(new SimpleISA(updater, testCases));
     }
 
     @Override
@@ -122,7 +125,7 @@ class SimpleMARCH extends MARCH {
     }
 
     @Override
-    public Pair<Counterexample, Counterexample> extractCTX(TestCase testCase) {
+    public Pair<TestResult, TestResult> extractCTX(TestCase testCase) {
         VcdFile ctx;
         try {
             ctx = new VcdFile(Files.readString(Path.of(BASE_PATH + "/syn/run/verif/engine_0/trace.vcd")));
@@ -131,10 +134,10 @@ class SimpleMARCH extends MARCH {
         }
         //Pair<Pair<Instruction, Integer>, Pair<Instruction, Integer>> c = findInstructionsPipeline(ctx, contract, test);
         Pair<Pair<Instruction, Integer>, Pair<Instruction, Integer>> c = findInstructionsSequential(ctx);
-        SimpleInstruction instr_1 = (SimpleInstruction) c.getLeft().getLeft();
-        Integer fetch_1 = c.getLeft().getRight();
-        SimpleInstruction instr_2 = (SimpleInstruction) c.getRight().getLeft();
-        Integer fetch_2 = c.getRight().getRight();
+        SimpleInstruction instr_1 = (SimpleInstruction) c.left().left();
+        Integer fetch_1 = c.left().right();
+        SimpleInstruction instr_2 = (SimpleInstruction) c.right().left();
+        Integer fetch_2 = c.right().right();
 
 
         // find possible contract templates
@@ -166,11 +169,21 @@ class SimpleMARCH extends MARCH {
             differences_1.add(new SimpleObservation(instr_1.getType(), SIMPLE_OBSERVATION_TYPE.REG_RS2));
             differences_2.add(new SimpleObservation(instr_2.getType(), SIMPLE_OBSERVATION_TYPE.REG_RS2));
         }
-        return new Pair<>(new SimpleCounterexample(differences_1), new SimpleCounterexample(differences_2));
+        return new Pair<>(new SimpleTestResult(differences_1, true), new SimpleTestResult(differences_2, true));
     }
 
     @Override
-    public Pair<Counterexample, Counterexample> extractCTX(int id, TestCase testCase) {
+    public Pair<TestResult, TestResult> extractCTX(int id, TestCase testCase) {
+        throw new UnsupportedOperationException("Not implemented");
+    }
+
+    @Override
+    public Pair<TestResult, TestResult> extractDifferences() {
+        throw new UnsupportedOperationException("Not implemented");
+    }
+
+    @Override
+    public Pair<TestResult, TestResult> extractDifferences(int id) {
         throw new UnsupportedOperationException("Not implemented");
     }
 
@@ -223,5 +236,10 @@ class SimpleMARCH extends MARCH {
     @Override
     public boolean simulate(int id) {
         throw new UnsupportedOperationException("Not implemented");
+    }
+
+    @Override
+    public String getName() {
+        return "simple";
     }
 }

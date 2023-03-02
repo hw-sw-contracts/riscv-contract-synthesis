@@ -11,41 +11,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-public class RISCVInstruction implements Instruction {
-
-    private final RISCV_TYPE type;
-    private final Integer rd;
-    private final Integer rs1;
-    private final Integer rs2;
-    private final Long imm;
-
-    public RISCVInstruction(RISCV_TYPE type, Integer rd, Integer rs1, Integer rs2, Long imm) {
-        this.type = type;
-        this.rd = rd;
-        this.rs1 = rs1;
-        this.rs2 = rs2;
-        this.imm = imm;
-    }
-
-    public RISCV_TYPE getType() {
-        return type;
-    }
-
-    public Integer getRd() {
-        return rd;
-    }
-
-    public Integer getRs1() {
-        return rs1;
-    }
-
-    public Integer getRs2() {
-        return rs2;
-    }
-
-    public Long getImm() {
-        return imm;
-    }
+public record RISCVInstruction(RISCV_TYPE type, Integer rd, Integer rs1, Integer rs2, Long imm) implements Instruction {
 
     public RISCVInstruction cloneAlteringRD(Integer rd) {
         return new RISCVInstruction(this.type, rd, this.rs1, this.rs2, this.imm);
@@ -92,14 +58,14 @@ public class RISCVInstruction implements Instruction {
             throw new IllegalArgumentException("Unknown instruction with op = " + instruction.substring(25) + "funct3 = " + instruction.substring(17, 20) + "funct7 = " + instruction.substring(0, 7));
         RISCV_TYPE t = candidates.stream().findFirst().orElseThrow();
 
-        int rd = Integer.parseUnsignedInt(instruction.substring(20, 25),2);
-        int rs1 = Integer.parseUnsignedInt(instruction.substring(12, 17),2);
-        int rs2 = Integer.parseUnsignedInt(instruction.substring(7, 12),2);
-        long imm_i = Long.parseLong(instruction.substring(0, 12),2);
-        long imm_s = Long.parseLong(instruction.substring(0, 7) + instruction.substring(20, 25),2);
-        long imm_b = Long.parseLong(instruction.substring(0, 1) + instruction.substring(24, 25) + instruction.substring(1, 7) + instruction.substring(20, 24) + "0",2);
-        long imm_u = Long.parseLong(instruction.substring(0, 20) + String.format("%012d", 0),2);
-        long imm_j = Long.parseLong(instruction.substring(0, 1) + instruction.substring(12, 20) + instruction.substring(11, 12) + instruction.substring(1, 11) + "0", 2);
+        int rd = Integer.parseUnsignedInt(instruction.substring(20, 25), 2);
+        int rs1 = Integer.parseUnsignedInt(instruction.substring(12, 17), 2);
+        int rs2 = Integer.parseUnsignedInt(instruction.substring(7, 12), 2);
+        long imm_i = Long.parseLong(instruction.substring(0, 12), 2);
+        long imm_s = Long.parseLong(instruction.substring(0, 7) + instruction.substring(20, 25), 2);
+        long imm_b = Long.parseLong(instruction.charAt(0) + instruction.substring(24, 25) + instruction.substring(1, 7) + instruction.substring(20, 24) + "0", 2);
+        long imm_u = Long.parseLong(instruction.substring(0, 20) + String.format("%012d", 0), 2);
+        long imm_j = Long.parseLong(instruction.charAt(0) + instruction.substring(12, 20) + instruction.charAt(11) + instruction.substring(1, 11) + "0", 2);
 
         return switch (t.getFormat()) {
             case RTYPE -> RISCVInstruction.RTYPE(t, rd, rs1, rs2);
@@ -112,7 +78,7 @@ public class RISCVInstruction implements Instruction {
     }
 
     public static RISCVInstruction parseHexString(String instruction) {
-        if (instruction.length() == 10 && instruction.substring(0, 2).equals("0x"))
+        if (instruction.length() == 10 && instruction.startsWith("0x"))
             instruction = instruction.substring(2);
         if (instruction.length() != 8) return null;
         return RISCVInstruction.parseBinaryString(StringUtils.toBinaryEncoding(instruction));
@@ -124,17 +90,16 @@ public class RISCVInstruction implements Instruction {
 
     private String encodeImmediate(Long immediate, RISCV_FORMAT format) {
         return switch (format) {
-
-            case RTYPE -> {throw new IllegalArgumentException("RTYPE instructions have no immediate.");}
+            case RTYPE -> throw new IllegalArgumentException("RTYPE instructions have no immediate.");
             case ITYPE, STYPE -> String.format("%12s", Long.toBinaryString(immediate)).replace(' ', '0');
             case BTYPE -> {
                 String s = String.format("%13s", Long.toBinaryString(immediate)).replace(' ', '0');
-                yield s.substring(0, 1) + s.substring(2, 8) + s.substring(8, 12) + s.substring(1, 2);
+                yield s.charAt(0) + s.substring(2, 8) + s.substring(8, 12) + s.charAt(1);
             }
             case UTYPE -> String.format("%32s", Long.toBinaryString(immediate)).replace(' ', '0').substring(0, 20);
             case JTYPE -> {
                 String s = String.format("%21s", Long.toBinaryString(immediate)).replace(' ', '0');
-                yield s.substring(0, 1) + s.substring(10, 20) + s.substring(9, 10) + s.substring(1, 9);
+                yield s.charAt(0) + s.substring(10, 20) + s.charAt(9) + s.substring(1, 9);
             }
         };
     }
@@ -151,12 +116,14 @@ public class RISCVInstruction implements Instruction {
     }
 
     public static void main(String[] args) {
-        RISCVInstruction i = RISCVInstruction.SW(15, 31, 0);
-        System.out.println(i.toHexEncoding());
-        printHexFile(Path.of("/home/yosys/bachelor/ibex_iverilog_simulation/2/init_1.dat"));
-        printHexFile(Path.of("/home/yosys/bachelor/ibex_iverilog_simulation/2/init_2.dat"));
-        printHexFile(Path.of("/home/yosys/bachelor/ibex_iverilog_simulation/2/memory_1.dat"));
-        printHexFile(Path.of("/home/yosys/bachelor/ibex_iverilog_simulation/2/memory_2.dat"));
+        RISCVInstruction i = RISCVInstruction.parseHexString("c5300213");
+        System.out.println(i);
+        //RISCVInstruction i = RISCVInstruction.SW(15, 31, 0);
+        //System.out.println(i.toHexEncoding());
+        //printHexFile(Path.of("/home/yosys/bachelor/ibex_iverilog_simulation/2/init_1.dat"));
+        //printHexFile(Path.of("/home/yosys/bachelor/ibex_iverilog_simulation/2/init_2.dat"));
+        //printHexFile(Path.of("/home/yosys/bachelor/ibex_iverilog_simulation/2/memory_1.dat"));
+        //printHexFile(Path.of("/home/yosys/bachelor/ibex_iverilog_simulation/2/memory_2.dat"));
         //RISCVInstruction addi = RISCVInstruction.ADDI(1, 0, 10);
         //RISCVInstruction addi_2 = RISCVInstruction.ADDI(2, 0, 30);
         //RISCVInstruction op = RISCVInstruction.SUB(3, 1, 2);
@@ -182,14 +149,14 @@ public class RISCVInstruction implements Instruction {
 
     public static void printHexFile(Path path) {
         System.out.println("Reading " + path.toString());
-        String s = null;
+        String s;
         try {
             s = Files.readString(path);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
         String[] lines = s.split("\n");
-        for (String line: lines) {
+        for (String line : lines) {
             System.out.println(Objects.requireNonNull(RISCVInstruction.parseHexString(line)) + " (0x" + Objects.requireNonNull(RISCVInstruction.parseHexString(line)).toHexEncoding() + ")");
         }
     }

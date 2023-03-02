@@ -1,7 +1,6 @@
 package contractgen.riscv.isa;
 
 import contractgen.Program;
-import contractgen.simple.isa.SimpleInstruction;
 
 import java.io.IOException;
 import java.nio.file.Files;

@@ -75,7 +75,7 @@ public class SimpleInstruction implements Instruction {
     }
 
     public static SimpleInstruction parseHexString(String instruction) {
-        if (instruction.length() == 10 && instruction.substring(0, 2).equals("0x"))
+        if (instruction.length() == 10 && instruction.startsWith("0x"))
             instruction = instruction.substring(2);
         if (instruction.length() != 8) return null;
         return SimpleInstruction.parseBinaryString(StringUtils.toBinaryEncoding(instruction));

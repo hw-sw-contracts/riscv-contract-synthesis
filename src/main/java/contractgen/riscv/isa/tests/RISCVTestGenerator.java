@@ -1,13 +1,11 @@
 package contractgen.riscv.isa.tests;
 
-import contractgen.Instruction;
 import contractgen.TestCase;
-import contractgen.TestCases;
 import contractgen.riscv.isa.RISCVInstruction;
 import contractgen.riscv.isa.RISCVProgram;
 import contractgen.riscv.isa.RISCVTestCase;
 import contractgen.riscv.isa.RISCV_TYPE;
-import contractgen.riscv.isa.contract.RISCVCounterexample;
+import contractgen.riscv.isa.contract.RISCVTestResult;
 import contractgen.riscv.isa.contract.RISCVObservation;
 import contractgen.riscv.isa.contract.RISCV_OBSERVATION_TYPE;
 import contractgen.util.Pair;
@@ -42,9 +40,9 @@ public class RISCVTestGenerator {
                     Pair<List<RISCVInstruction>, List<RISCVInstruction>> prefix = alterObservation(observation, instruction);
                     if (prefix != null) {
                         cases.add(new RISCVTestCase(
-                                new RISCVProgram(registers, Stream.concat(prefix.getLeft().stream(), suffix.stream()).toList()),
-                                new RISCVProgram(registers, Stream.concat(prefix.getRight().stream(), suffix.stream()).toList()),
-                                Integer.max(prefix.getLeft().size() + suffix.size(), prefix.getRight().size() + suffix.size()), new RISCVCounterexample(Set.of(new RISCVObservation(type, observation)))));
+                                new RISCVProgram(registers, Stream.concat(prefix.left().stream(), suffix.stream()).toList()),
+                                new RISCVProgram(registers, Stream.concat(prefix.right().stream(), suffix.stream()).toList()),
+                                Integer.max(prefix.left().size() + suffix.size(), prefix.right().size() + suffix.size()), new RISCVTestResult(Set.of(new RISCVObservation(type, observation)), true)));
                     }
                 }
             }
@@ -68,73 +66,76 @@ public class RISCVTestGenerator {
     }
 
     private Pair<List<RISCVInstruction>, List<RISCVInstruction>> alterObservation(RISCV_OBSERVATION_TYPE type, RISCVInstruction instruction) {
-        Pair<List<RISCVInstruction>, List<RISCVInstruction>> original = new Pair<>(List.of(instruction), List.of(instruction));
         return switch (type) {
             case TYPE -> null;
             case OPCODE -> null; // TODO what makes sense here?
             case FUNCT3 -> null;
             case FUNCT5 -> null;
             case RD -> {
-                if (instruction.getRd() == null) yield null;
+                if (instruction.rd() == null) yield null;
                 RISCVInstruction ins1 = instruction.cloneAlteringRD(r.nextInt(1, NUMBER_REGISTERS));
                 RISCVInstruction ins2 = instruction.cloneAlteringRD(r.nextInt(1, NUMBER_REGISTERS));
                 yield new Pair<>(List.of(ins1), List.of(ins2));
             }
             case RS1 -> {
-                if (instruction.getRs1() == null) yield null;
+                if (instruction.rs1() == null) yield null;
                 RISCVInstruction ins1 = instruction.cloneAlteringRS1(r.nextInt(NUMBER_REGISTERS));
                 RISCVInstruction ins2 = instruction.cloneAlteringRS1(r.nextInt(NUMBER_REGISTERS));
                 yield new Pair<>(List.of(ins1), List.of(ins2));
             }
             case RS2 -> {
-                if (instruction.getRs2() == null) yield null;
+                if (instruction.rs2() == null) yield null;
                 RISCVInstruction ins1 = instruction.cloneAlteringRS2(r.nextInt(NUMBER_REGISTERS));
                 RISCVInstruction ins2 = instruction.cloneAlteringRS2(r.nextInt(NUMBER_REGISTERS));
                 yield new Pair<>(List.of(ins1), List.of(ins2));
             }
             case IMM -> {
-                if (instruction.getImm() == null) yield null;
+                if (instruction.imm() == null) yield null;
                 RISCVInstruction ins1 = instruction.cloneAlteringIMM(r.nextLong(getBound(instruction)));
                 RISCVInstruction ins2 = instruction.cloneAlteringIMM(r.nextLong(getBound(instruction)));
                 yield new Pair<>(List.of(ins1), List.of(ins2));
             }
             case REG_RS1 -> {
-                if (instruction.getRs1() == null) yield null;
-                RISCVInstruction ins1 = RISCVInstruction.ADDI(instruction.getRs1(), 0, r.nextLong(MAX_IMM_I));
-                RISCVInstruction ins2 = RISCVInstruction.ADDI(instruction.getRs1(), 0, r.nextLong(MAX_IMM_I));
+                if (instruction.rs1() == null) yield null;
+                RISCVInstruction ins1 = RISCVInstruction.ADDI(instruction.rs1(), 0, r.nextLong(MAX_IMM_I));
+                RISCVInstruction ins2 = RISCVInstruction.ADDI(instruction.rs1(), 0, r.nextLong(MAX_IMM_I));
                 yield new Pair<>(List.of(ins1, instruction), List.of(ins2, instruction));
             }
             case REG_RS2 -> {
-                if (instruction.getRs2() == null) yield null;
-                RISCVInstruction ins1 = RISCVInstruction.ADDI(instruction.getRs2(), 0, r.nextLong(MAX_IMM_I));
-                RISCVInstruction ins2 = RISCVInstruction.ADDI(instruction.getRs2(), 0, r.nextLong(MAX_IMM_I));
+                if (instruction.rs2() == null) yield null;
+                RISCVInstruction ins1 = RISCVInstruction.ADDI(instruction.rs2(), 0, r.nextLong(MAX_IMM_I));
+                RISCVInstruction ins2 = RISCVInstruction.ADDI(instruction.rs2(), 0, r.nextLong(MAX_IMM_I));
                 yield new Pair<>(List.of(ins1, instruction), List.of(ins2, instruction));
             }
             case MEM_RS1 -> {
-                if (instruction.getRs1() == null) yield null;
+                if (instruction.rs1() == null) yield null;
                 long address = r.nextLong(MAX_IMM_I);
                 RISCVInstruction val1 = RISCVInstruction.ADDI(31, 0, r.nextLong(MAX_IMM_I));
                 RISCVInstruction val2 = RISCVInstruction.ADDI(30, 0, r.nextLong(MAX_IMM_I));
-                RISCVInstruction instr_addr = RISCVInstruction.ADDI(instruction.getRs1(), 0, address);
-                RISCVInstruction ins1 = RISCVInstruction.SW(instruction.getRs1(), 31, 0);
-                RISCVInstruction ins2 = RISCVInstruction.SW(instruction.getRs1(), 30, 0);
+                RISCVInstruction instr_addr = RISCVInstruction.ADDI(instruction.rs1(), 0, address);
+                RISCVInstruction ins1 = RISCVInstruction.SW(instruction.rs1(), 31, 0);
+                RISCVInstruction ins2 = RISCVInstruction.SW(instruction.rs1(), 30, 0);
                 yield new Pair<>(List.of(val1, val2, instr_addr, ins1, instruction), List.of(val1, val2, instr_addr, ins2, instruction));
             }
             case MEM_RS2 -> {
-                if (instruction.getRs2() == null) yield null;
+                if (instruction.rs2() == null) yield null;
                 long address = r.nextLong(MAX_IMM_I);
                 RISCVInstruction val1 = RISCVInstruction.ADDI(31, 0, r.nextLong(MAX_IMM_I));
                 RISCVInstruction val2 = RISCVInstruction.ADDI(30, 0, r.nextLong(MAX_IMM_I));
-                RISCVInstruction instr_addr = RISCVInstruction.ADDI(instruction.getRs2(), 0, address);
-                RISCVInstruction ins1 = RISCVInstruction.SW(instruction.getRs2(), 31, 0);
-                RISCVInstruction ins2 = RISCVInstruction.SW(instruction.getRs2(), 30, 0);
+                RISCVInstruction instr_addr = RISCVInstruction.ADDI(instruction.rs2(), 0, address);
+                RISCVInstruction ins1 = RISCVInstruction.SW(instruction.rs2(), 31, 0);
+                RISCVInstruction ins2 = RISCVInstruction.SW(instruction.rs2(), 30, 0);
                 yield new Pair<>(List.of(val1, val2, instr_addr, ins1, instruction), List.of(val1, val2, instr_addr, ins2, instruction));
             }
+            case REG_RD -> null; //TODO
+            case MEM_ADDR -> null;
+            case MEM_R_DATA -> null;
+            case MEM_W_DATA -> null;
         };
     }
 
     private static long getBound(RISCVInstruction instruction) {
-        return switch (instruction.getType().getFormat()) {
+        return switch (instruction.type().getFormat()) {
             case RTYPE -> 0L;
             case ITYPE, STYPE -> MAX_IMM_I;
             case BTYPE -> MAX_IMM_B;

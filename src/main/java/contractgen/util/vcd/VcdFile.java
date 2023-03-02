@@ -21,7 +21,7 @@ public class VcdFile {
 
     private final Pattern varPattern = Pattern.compile("\\s?(.*?) (.*?) (.*?) (.*?)( .*|$)");
 
-    private Map<String, Wire> wires = new HashMap<>();
+    private final Map<String, Wire> wires = new HashMap<>();
 
         public VcdFile(String s) {
             String[] lines = s.split("\\$enddefinitions\\s*\\$end\n");
@@ -104,30 +104,27 @@ public class VcdFile {
             } else if ("var".equals(name)) {
                 Matcher m = varPattern.matcher(content);
                 if (m.find()) {
-                    if (m.group(1).equals("wire") || m.group(1).equals("reg") || m.group(1).equals("parameter")) {
-                        if (current == null)
-                            throw new IllegalStateException("Not in a scope.");
-                        int width = Integer.parseInt(m.group(2));
-                        String internal_name = m.group(3);
-                        String wire_name = m.group(4);
-                        Wire w = new Wire(wire_name, internal_name, width);
-                        current.addWire(w);
-                        wires.put(internal_name, w);
-                        //System.out.println("Adding wire " + internal_name);
-                    } else if (m.group(1).equals("integer")) {
-                        int width = Integer.parseInt(m.group(2));
-                        String internal_name = m.group(3);
-                        String wire_name = m.group(4);
-                        Wire w = new Wire(wire_name, internal_name, width);
-                        wires.put(internal_name, w);
-                    } else if (m.group(1).equals("event")) {
-                        int width = Integer.parseInt(m.group(2));
-                        String internal_name = m.group(3);
-                        String wire_name = m.group(4);
-                        Wire w = new Wire(wire_name, internal_name, width);
-                        wires.put(internal_name, w);
-                    } else {
-                        throw new IllegalArgumentException("Unsupported var type " + m.group(1) + " in context " + content);
+                    switch (m.group(1)) {
+                        case "wire", "reg", "parameter" -> {
+                            if (current == null)
+                                throw new IllegalStateException("Not in a scope.");
+                            int width = Integer.parseInt(m.group(2));
+                            String internal_name = m.group(3);
+                            String wire_name = m.group(4);
+                            Wire w = new Wire(wire_name, internal_name, width);
+                            current.addWire(w);
+                            wires.put(internal_name, w);
+                            //System.out.println("Adding wire " + internal_name);
+                        }
+                        case "integer", "event" -> {
+                            int width = Integer.parseInt(m.group(2));
+                            String internal_name = m.group(3);
+                            String wire_name = m.group(4);
+                            Wire w = new Wire(wire_name, internal_name, width);
+                            wires.put(internal_name, w);
+                        }
+                        default ->
+                                throw new IllegalArgumentException("Unsupported var type " + m.group(1) + " in context " + content);
                     }
                     // ignoring all other types of scope
                 }

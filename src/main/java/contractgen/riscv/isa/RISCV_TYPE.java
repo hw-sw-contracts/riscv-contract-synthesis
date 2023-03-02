@@ -93,9 +93,9 @@ public enum RISCV_TYPE {
 
     public String generateContract(String suffix) {
         if (funct3 == null)
-            return "if (op_" + suffix + " == " + opcode + ") begin\n";
+            return "if (op_" + suffix + " == 'b" + opcode + ") begin\n";
         if (funct7 == null)
-            return "if (op_" + suffix + " == " + opcode + " && funct_3_" + suffix + " == " + funct3 + ") begin\n";
-        return "if (op_" + suffix + " == " + opcode + " && funct_3_" + suffix + " == " + funct3 +  " && funct_7_" + suffix + " == " + funct7 + ") begin\n";
+            return "if (op_" + suffix + " == 'b" + opcode + " && funct_3_" + suffix + " == 'b" + funct3 + ") begin\n";
+        return "if (op_" + suffix + " == 'b" + opcode + " && funct_3_" + suffix + " == 'b" + funct3 +  " && funct_7_" + suffix + " == 'b" + funct7 + ") begin\n";
     }
 }

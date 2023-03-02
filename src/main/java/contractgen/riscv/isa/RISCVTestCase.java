@@ -1,6 +1,6 @@
 package contractgen.riscv.isa;
 
-import contractgen.Counterexample;
+import contractgen.TestResult;
 import contractgen.Program;
 import contractgen.TestCase;
 
@@ -10,7 +10,7 @@ public class RISCVTestCase extends TestCase {
         super(program1, program2, maxInstructionCount);
     }
 
-    public RISCVTestCase(Program program1, Program program2, int maxInstructionCount, Counterexample ctx) {
+    public RISCVTestCase(Program program1, Program program2, int maxInstructionCount, TestResult ctx) {
         super(program1, program2, maxInstructionCount, ctx);
     }
 }

@@ -13,11 +13,10 @@ public class ScriptUtils {
         Process p = null;
         try {
             StringBuilder sb = new StringBuilder();
-            List<String> cmdList = new ArrayList<>();
             // adding command and args to the list
-            cmdList.add(path);
+            List<String> cmdList = new ArrayList<>(List.of(path.split(" +")));
             ProcessBuilder pb = new ProcessBuilder(cmdList);
-            pb.directory(new File(path).getParentFile());
+            pb.directory(new File(path.split(" +")[0]).getParentFile());
             // System.out.println("Starting Script...");
             boolean success = false;
             while (!success) {
@@ -26,7 +25,7 @@ public class ScriptUtils {
                     p.waitFor();
                     success = true;
                 } catch (IOException e) { // binary may be busy
-                    success = false;
+
                 }
             }
             BufferedReader reader = new BufferedReader(new InputStreamReader(p.getInputStream()));

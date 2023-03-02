@@ -1,6 +1,7 @@
 package contractgen;
 
-import java.util.stream.IntStream;
+import java.io.IOException;
+import java.nio.file.Path;
 
 public abstract class ISA {
 
@@ -15,4 +16,6 @@ public abstract class ISA {
     }
 
     public abstract Contract getContract();
+
+    public abstract void loadContract(Path path) throws IOException;
 }

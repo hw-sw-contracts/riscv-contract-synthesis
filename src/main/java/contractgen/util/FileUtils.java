@@ -22,8 +22,10 @@ public class FileUtils {
     }
 
     private static void copyFolder(File source, File dest, CopyOption... options) throws IOException {
-        if (!dest.exists())
-            dest.mkdirs();
+        if (!dest.exists()) {
+            boolean success = dest.mkdirs();
+            if (!success) throw new IOException("Failed to create directory");
+        }
         File[] contents = source.listFiles();
         if (contents != null) {
             for (File f : contents) {
@@ -40,10 +42,12 @@ public class FileUtils {
         Files.copy(source.toPath(), dest.toPath(), options);
     }
 
-    private static void ensureParentFolder(File file) {
+    private static void ensureParentFolder(File file) throws IOException {
         File parent = file.getParentFile();
-        if (parent != null && !parent.exists())
-            parent.mkdirs();
+        if (parent != null && !parent.exists()) {
+            boolean success = parent.mkdirs();
+            if (!success) throw new IOException("Failed to create directory");
+        }
     }
 
     public static void replaceString(String filePath, String text, String replacement) {
