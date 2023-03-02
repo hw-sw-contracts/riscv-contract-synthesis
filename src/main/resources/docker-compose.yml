@@ -1,0 +1,15 @@
+version: "3.7"
+
+services:
+  yosys:
+    container_name: yosys
+    image: gdnmhr/symbiyosys:latest
+    volumes:
+      - .:/home/yosys/resources
+      - ../../..:/home/yosys/project
+    #entrypoint: /bin/bash
+    entrypoint: /home/yosys/resources/run.sh
+    stdin_open: true
+    tty: true
+    cap_add:
+      - SYS_PTRACE
