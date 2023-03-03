@@ -93,6 +93,33 @@
 `define OR_FUNCT_7		7'b0000000
 `define AND_FUNCT_7		7'b0000000
 
+`define MUL_OP          7'b0110011
+`define MULH_OP         7'b0110011
+`define MULHSU_OP       7'b0110011
+`define MULHU_OP        7'b0110011
+`define DIV_OP          7'b0110011
+`define DIVU_OP         7'b0110011
+`define REM_OP          7'b0110011
+`define REMU_OP         7'b0110011
+
+`define MUL_FUNCT_7     7'b0000001
+`define MULH_FUNCT_7    7'b0000001
+`define MULHSU_FUNCT_7  7'b0000001
+`define MULHU_FUNCT_7   7'b0000001
+`define DIV_FUNCT_7     7'b0000001
+`define DIVU_FUNCT_7    7'b0000001
+`define REM_FUNCT_7     7'b0000001
+`define REMU_FUNCT_7    7'b0000001
+
+`define MUL_FUNCT_3     3'b000
+`define MULH_FUNCT_3    3'b001
+`define MULHSU_FUNCT_3  3'b010
+`define MULHU_FUNCT_3   3'b011
+`define DIV_FUNCT_3     3'b100
+`define DIVU_FUNCT_3    3'b101
+`define REM_FUNCT_3     3'b110
+`define REMU_FUNCT_3    3'b111
+
 module ctr(
     input logic clk_i,
     input logic retire_i,

@@ -6,10 +6,8 @@ import contractgen.util.Pair;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.text.SimpleDateFormat;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class ParallelIverilogGenerator extends Generator {
@@ -56,7 +54,7 @@ public class ParallelIverilogGenerator extends Generator {
                 StringBuilder sb = new StringBuilder();
                 changes.forEach((k, e) -> sb.append(k).append(";").append(e).append(";\n"));
                 try {
-                    Files.write(Path.of("changes.csv"), sb.toString().getBytes());
+                    Files.write(Path.of("changes-" + new SimpleDateFormat("yyyy-MM-dd-HH-mm-ss").format(new Date()) + ".csv"), sb.toString().getBytes());
                 } catch (IOException e) {
                     throw new RuntimeException(e);
                 }

@@ -334,6 +334,38 @@ public record RISCVInstruction(RISCV_TYPE type, Integer rd, Integer rs1, Integer
         return RISCVInstruction.RTYPE(RISCV_TYPE.AND, rd, rs1, rs2);
     }
 
+    public static RISCVInstruction MUL(int rd, int rs1, int rs2) {
+        return RISCVInstruction.RTYPE(RISCV_TYPE.MUL, rd, rs1, rs2);
+    }
+
+    public static RISCVInstruction MULH(int rd, int rs1, int rs2) {
+        return RISCVInstruction.RTYPE(RISCV_TYPE.MULH, rd, rs1, rs2);
+    }
+
+    public static RISCVInstruction MULHSU(int rd, int rs1, int rs2) {
+        return RISCVInstruction.RTYPE(RISCV_TYPE.MULHSU, rd, rs1, rs2);
+    }
+
+    public static RISCVInstruction MULHU(int rd, int rs1, int rs2) {
+        return RISCVInstruction.RTYPE(RISCV_TYPE.MULHU, rd, rs1, rs2);
+    }
+
+    public static RISCVInstruction DIV(int rd, int rs1, int rs2) {
+        return RISCVInstruction.RTYPE(RISCV_TYPE.DIV, rd, rs1, rs2);
+    }
+
+    public static RISCVInstruction DIVU(int rd, int rs1, int rs2) {
+        return RISCVInstruction.RTYPE(RISCV_TYPE.DIVU, rd, rs1, rs2);
+    }
+
+    public static RISCVInstruction REM(int rd, int rs1, int rs2) {
+        return RISCVInstruction.RTYPE(RISCV_TYPE.REM, rd, rs1, rs2);
+    }
+
+    public static RISCVInstruction REMU(int rd, int rs1, int rs2) {
+        return RISCVInstruction.RTYPE(RISCV_TYPE.REMU, rd, rs1, rs2);
+    }
+
     public static RISCVInstruction NOP() {
         return RISCVInstruction.ITYPE(RISCV_TYPE.ADDI, 0, 0, 0L);
     }

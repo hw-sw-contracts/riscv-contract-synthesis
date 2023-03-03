@@ -139,9 +139,11 @@ public class CVA6 extends MARCH {
 
 
             if (!Objects.equals(instr_1.type(), instr_2.type())) {
+                currentGuess--;
+                continue;
                 //throw new IllegalStateException("Why?" + instr_1 + instr_2);
-                obs1.add(new RISCVObservation(instr_1.type(), RISCV_OBSERVATION_TYPE.OPCODE));
-                obs2.add(new RISCVObservation(instr_2.type(), RISCV_OBSERVATION_TYPE.OPCODE));
+                //obs1.add(new RISCVObservation(instr_1.type(), RISCV_OBSERVATION_TYPE.OPCODE));
+                //obs2.add(new RISCVObservation(instr_2.type(), RISCV_OBSERVATION_TYPE.OPCODE));
             }
 
             if (!Objects.equals(instr_1.rd(), instr_2.rd())) {

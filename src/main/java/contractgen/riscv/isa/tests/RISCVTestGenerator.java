@@ -1,14 +1,12 @@
 package contractgen.riscv.isa.tests;
 
 import contractgen.TestCase;
-import contractgen.riscv.isa.RISCVInstruction;
-import contractgen.riscv.isa.RISCVProgram;
-import contractgen.riscv.isa.RISCVTestCase;
-import contractgen.riscv.isa.RISCV_TYPE;
+import contractgen.riscv.isa.*;
 import contractgen.riscv.isa.contract.RISCVTestResult;
 import contractgen.riscv.isa.contract.RISCVObservation;
 import contractgen.riscv.isa.contract.RISCV_OBSERVATION_TYPE;
 import contractgen.util.Pair;
+import contractgen.util.StringUtils;
 
 import java.util.*;
 import java.util.stream.Stream;
@@ -23,18 +21,20 @@ public class RISCVTestGenerator {
 
     private final Random r;
     private final int repetitions;
+    private final List<RISCV_TYPE> types;
 
-    RISCVTestGenerator(long seed, int repetitions) {
+    RISCVTestGenerator(Set<RISCV_SUBSET> subsets, long seed, int repetitions) {
         r = new Random(seed);
         this.repetitions = repetitions;
+        this.types = Arrays.stream(RISCV_TYPE.values()).filter(t -> subsets.contains(t.getSubset())).toList();
     }
 
     public List<TestCase> generate() {
         List<TestCase> cases = new ArrayList<>();
         for (int i = 0; i < repetitions; i++) {
-            for (RISCV_TYPE type: RISCV_TYPE.values()) {
+            for (RISCV_TYPE type: types) {
                 Map<Integer, Integer> registers = randomRegisters();
-                List<RISCVInstruction> suffix = randomSequence(10);
+                List<RISCVInstruction> suffix = randomSequence(r.nextInt(5, 25));
                 RISCVInstruction instruction = randomInstructionFromType(type);
                 for (RISCV_OBSERVATION_TYPE observation: RISCV_OBSERVATION_TYPE.values()) {
                     Pair<List<RISCVInstruction>, List<RISCVInstruction>> prefix = alterObservation(observation, instruction);
@@ -46,6 +46,8 @@ public class RISCVTestGenerator {
                     }
                 }
             }
+            if (i % 3 == 0)
+                cases.add(new RISCVTestCase(new RISCVProgram(randomRegisters(), randomSequence(r.nextInt(5, 50))), new RISCVProgram(randomRegisters(), randomSequence(r.nextInt(5, 50))), 50));
         }
         return cases;
 
@@ -67,10 +69,7 @@ public class RISCVTestGenerator {
 
     private Pair<List<RISCVInstruction>, List<RISCVInstruction>> alterObservation(RISCV_OBSERVATION_TYPE type, RISCVInstruction instruction) {
         return switch (type) {
-            case TYPE -> null;
-            case OPCODE -> null; // TODO what makes sense here?
-            case FUNCT3 -> null;
-            case FUNCT5 -> null;
+            case TYPE, OPCODE, FUNCT5, FUNCT3, MEM_ADDR, MEM_W_DATA -> null;
             case RD -> {
                 if (instruction.rd() == null) yield null;
                 RISCVInstruction ins1 = instruction.cloneAlteringRD(r.nextInt(1, NUMBER_REGISTERS));
@@ -127,10 +126,23 @@ public class RISCVTestGenerator {
                 RISCVInstruction ins2 = RISCVInstruction.SW(instruction.rs2(), 30, 0);
                 yield new Pair<>(List.of(val1, val2, instr_addr, ins1, instruction), List.of(val1, val2, instr_addr, ins2, instruction));
             }
-            case REG_RD -> null; //TODO
-            case MEM_ADDR -> null;
-            case MEM_R_DATA -> null;
-            case MEM_W_DATA -> null;
+            case REG_RD -> {
+                if (instruction.rd() == null) yield null;
+                RISCVInstruction ins1 = instruction.cloneAlteringRD(r.nextInt(NUMBER_REGISTERS));
+                RISCVInstruction ins2 = instruction.cloneAlteringRD(r.nextInt(NUMBER_REGISTERS));
+                yield new Pair<>(List.of(ins1), List.of(ins2));
+            }
+            case MEM_R_DATA -> {
+                if (instruction.imm() == null || instruction.rs1() == null) yield null;
+                long address = r.nextLong(MAX_IMM_I);
+                RISCVInstruction val1 = RISCVInstruction.ADDI(31, 0, r.nextLong(MAX_IMM_I));
+                RISCVInstruction val2 = RISCVInstruction.ADDI(30, 0, r.nextLong(MAX_IMM_I));
+                RISCVInstruction instr_addr_1 = RISCVInstruction.ADDI(instruction.rs1(), 0, address);
+                RISCVInstruction ins1 = RISCVInstruction.SW(instruction.rs1(), 31, 0);
+                RISCVInstruction ins2 = RISCVInstruction.SW(instruction.rs1(), 30, 0);
+                RISCVInstruction instr_addr_2 = RISCVInstruction.ADDI(instruction.rs1(), instruction.rs1(), instruction.imm());
+                yield new Pair<>(List.of(val1, val2, instr_addr_1, ins1, instr_addr_2, instruction), List.of(val1, val2, instr_addr_1, ins2, instr_addr_2, instruction));
+            }
         };
     }
 
@@ -147,7 +159,7 @@ public class RISCVTestGenerator {
     private List<RISCVInstruction> randomSequence(int size) {
         List<RISCVInstruction> result = new ArrayList<>(size);
         for (int i = 0; i < size; i++) {
-            RISCV_TYPE type = RISCV_TYPE.values()[r.nextInt(RISCV_TYPE.values().length - 1)];
+            RISCV_TYPE type = types.get(r.nextInt(types.size() - 1));
             result.add(randomInstructionFromType(type));
         }
         return result;
