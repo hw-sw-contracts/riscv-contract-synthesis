@@ -12,6 +12,9 @@ import java.util.Set;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
+/**
+ * Computes a contract building the powerset of all possible contracts and afterwards selecting the cheapest one.
+ */
 public class PowerSetUpdater implements Updater {
 
     @Override

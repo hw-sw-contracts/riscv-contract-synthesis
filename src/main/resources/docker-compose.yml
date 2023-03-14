@@ -3,7 +3,8 @@ version: "3.7"
 services:
   yosys:
     container_name: yosys
-    image: gdnmhr/symbiyosys:latest
+    build: .
+    # image: gdnmhr/symbiyosys:latest
     volumes:
       - .:/home/yosys/resources
       - ../../..:/home/yosys/project

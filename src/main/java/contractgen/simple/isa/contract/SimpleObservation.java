@@ -3,6 +3,12 @@ package contractgen.simple.isa.contract;
 import contractgen.Observation;
 import contractgen.simple.isa.SIMPLE_TYPE;
 
+/**
+ * An oservation for the simple ISA.
+ *
+ * @param type          The type of the instruction this observation is associated to.
+ * @param observation   The kind of observation.
+ */
 public record SimpleObservation(SIMPLE_TYPE type, SIMPLE_OBSERVATION_TYPE observation) implements Observation {
 
     public int getValue() {

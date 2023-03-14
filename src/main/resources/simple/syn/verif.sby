@@ -1,0 +1,22 @@
+[options]
+mode bmc
+depth /* Number Steps */
+multiclock on
+
+[engines]
+smtbmc
+
+[script]
+read -formal -sv core.v core_pipeline.v instr_mem_1.v instr_mem_2.v atk.v ctr.v clk_sync.v control.v top.v 
+prep -top top
+
+[files]
+core.v
+core_pipeline.v
+instr_mem_1.v
+instr_mem_2.v
+atk.v
+ctr.v
+clk_sync.v
+control.v
+top.v

@@ -3,6 +3,12 @@ package contractgen.riscv.isa.contract;
 import contractgen.Observation;
 import contractgen.riscv.isa.RISCV_TYPE;
 
+/**
+ * An onservation for the RISC-V ISA.
+ *
+ * @param type          The type of instruction this observation should be associated to.
+ * @param observation   The observation type.
+ */
 public record RISCVObservation(RISCV_TYPE type, RISCV_OBSERVATION_TYPE observation) implements Observation {
 
     @Override

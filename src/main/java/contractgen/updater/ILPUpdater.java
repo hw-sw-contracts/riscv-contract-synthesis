@@ -12,15 +12,18 @@ import contractgen.util.Pair;
 
 import java.util.*;
 
+/**
+ * Updates the contract using integer linear programming.
+ */
 public class ILPUpdater implements Updater {
     @Override
     public Set<Observation> update(List<TestResult> testResults) {
-        List<TestResult> positive = testResults.stream().filter(res -> !res.isAdversaryDistinguishable()).toList();
+        List<TestResult> positive = testResults.stream().filter(res -> !res.getPossibleObservations().isEmpty()).filter(res -> !res.isAdversaryDistinguishable()).toList();
         @SuppressWarnings("Convert2MethodRef")
-        List<TestResult> negative = testResults.stream().filter(res -> res.isAdversaryDistinguishable()).toList();
+        List<TestResult> negative = testResults.stream().filter(res -> !res.getPossibleObservations().isEmpty()).filter(res -> res.isAdversaryDistinguishable()).toList();
 
         Loader.loadNativeLibraries();
-        MPSolver solver = MPSolver.createSolver("GLOP");
+        MPSolver solver = MPSolver.createSolver("CP_SAT");
 
         Set<Observation> allObservations = new HashSet<>();
         testResults.forEach(ctx -> allObservations.addAll(ctx.getPossibleObservations()));
@@ -56,6 +59,22 @@ public class ILPUpdater implements Updater {
                 constraint.setCoefficient(do_mapping.get(obs), 1);
             }
         }
+
+        solver.solve();
+
+        double goal = objective.value();
+        objective.clear();
+
+        MPConstraint primaryGoal = solver.makeConstraint(goal, goal);
+        for (Pair<MPVariable, Integer> var: ca_mapping.values()) {
+            primaryGoal.setCoefficient(var.left(), var.right());
+        }
+
+        // Minimize overall size of the contract
+        for (MPVariable var: do_mapping.values()) {
+            objective.setCoefficient(var, 1);
+        }
+        objective.setMinimization();
 
         solver.solve();
 

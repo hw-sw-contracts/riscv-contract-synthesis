@@ -1,5 +1,9 @@
 package contractgen.util.axi;
 
+/**
+ * The configuration of the AXI interface.
+ */
+@SuppressWarnings("MissingJavadoc")
 public class AXI_CONFIG {
 
     public static final int AXI_ADDR_WIDTH = 64;

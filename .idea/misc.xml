@@ -198,6 +198,131 @@
             </Define>
           </value>
         </entry>
+        <entry key="ALU_ADD_IMM">
+          <value>
+            <Define>
+              <option name="definitions">
+                <list>
+                  <Body>
+                    <option name="offset" value="81" />
+                    <option name="replacementList" value="8'h2" />
+                    <option name="source" value="core_pipeline.sv" />
+                  </Body>
+                  <Body>
+                    <option name="offset" value="81" />
+                    <option name="replacementList" value="8'h2" />
+                    <option name="source" value="ctr.sv" />
+                  </Body>
+                  <Body>
+                    <option name="offset" value="81" />
+                    <option name="replacementList" value="8'h2" />
+                    <option name="source" value="core.sv" />
+                  </Body>
+                </list>
+              </option>
+            </Define>
+          </value>
+        </entry>
+        <entry key="ALU_ADD_REG">
+          <value>
+            <Define>
+              <option name="definitions">
+                <list>
+                  <Body>
+                    <option name="offset" value="52" />
+                    <option name="replacementList" value="8'h1" />
+                    <option name="source" value="core_pipeline.sv" />
+                  </Body>
+                  <Body>
+                    <option name="offset" value="52" />
+                    <option name="replacementList" value="8'h1" />
+                    <option name="source" value="ctr.sv" />
+                  </Body>
+                  <Body>
+                    <option name="offset" value="52" />
+                    <option name="replacementList" value="8'h1" />
+                    <option name="source" value="core.sv" />
+                  </Body>
+                </list>
+              </option>
+            </Define>
+          </value>
+        </entry>
+        <entry key="ALU_MUL_IMM">
+          <value>
+            <Define>
+              <option name="definitions">
+                <list>
+                  <Body>
+                    <option name="offset" value="139" />
+                    <option name="replacementList" value="8'h4" />
+                    <option name="source" value="core_pipeline.sv" />
+                  </Body>
+                  <Body>
+                    <option name="offset" value="139" />
+                    <option name="replacementList" value="8'h4" />
+                    <option name="source" value="ctr.sv" />
+                  </Body>
+                  <Body>
+                    <option name="offset" value="139" />
+                    <option name="replacementList" value="8'h4" />
+                    <option name="source" value="core.sv" />
+                  </Body>
+                </list>
+              </option>
+            </Define>
+          </value>
+        </entry>
+        <entry key="ALU_MUL_REG">
+          <value>
+            <Define>
+              <option name="definitions">
+                <list>
+                  <Body>
+                    <option name="offset" value="110" />
+                    <option name="replacementList" value="8'h3" />
+                    <option name="source" value="core_pipeline.sv" />
+                  </Body>
+                  <Body>
+                    <option name="offset" value="110" />
+                    <option name="replacementList" value="8'h3" />
+                    <option name="source" value="ctr.sv" />
+                  </Body>
+                  <Body>
+                    <option name="offset" value="110" />
+                    <option name="replacementList" value="8'h3" />
+                    <option name="source" value="core.sv" />
+                  </Body>
+                </list>
+              </option>
+            </Define>
+          </value>
+        </entry>
+        <entry key="ALU_NO_OP">
+          <value>
+            <Define>
+              <option name="definitions">
+                <list>
+                  <Body>
+                    <option name="offset" value="23" />
+                    <option name="replacementList" value="8'h0" />
+                    <option name="source" value="core_pipeline.sv" />
+                  </Body>
+                  <Body>
+                    <option name="offset" value="23" />
+                    <option name="replacementList" value="8'h0" />
+                    <option name="source" value="ctr.sv" />
+                  </Body>
+                  <Body>
+                    <option name="offset" value="23" />
+                    <option name="replacementList" value="8'h0" />
+                    <option name="source" value="core.sv" />
+                  </Body>
+                </list>
+              </option>
+            </Define>
+          </value>
+        </entry>
         <entry key="ANDI_FUNCT_3">
           <value>
             <Define>
@@ -599,6 +724,17 @@
                   <option value="ibex_wb_stage.sv" />
                   <option value="ibex_core.sv" />
                   <option value="prim_fifo_sync.sv" />
+                  <option value="prim_keccak_fpv.sv" />
+                  <option value="prim_alert_rxtx_assert_fpv.sv" />
+                  <option value="prim_esc_rxtx_assert_fpv.sv" />
+                  <option value="prim_alert_rxtx_async_assert_fpv.sv" />
+                  <option value="prim_fifo_sync_assert_fpv.sv" />
+                  <option value="prim_arbiter_fixed.sv" />
+                  <option value="prim_diff_decode.sv" />
+                  <option value="prim_multibit_sync.sv" />
+                  <option value="prim_dom_and_2share.sv" />
+                  <option value="ibex_icache_ecc_protocol_checker.sv" />
+                  <option value="ibex_branch_predict.sv" />
                 </set>
               </option>
             </Define>
@@ -663,6 +799,13 @@
                   <option value="ibex_wb_stage.sv" />
                   <option value="ibex_core.sv" />
                   <option value="prim_fifo_sync.sv" />
+                  <option value="prim_keccak_fpv.sv" />
+                  <option value="prim_esc_rxtx_assert_fpv.sv" />
+                  <option value="prim_fifo_sync_assert_fpv.sv" />
+                  <option value="prim_arbiter_fixed.sv" />
+                  <option value="prim_diff_decode.sv" />
+                  <option value="prim_multibit_sync.sv" />
+                  <option value="ibex_branch_predict.sv" />
                 </set>
               </option>
             </Define>
@@ -713,6 +856,13 @@
                   <option value="ibex_wb_stage.sv" />
                   <option value="ibex_core.sv" />
                   <option value="prim_fifo_sync.sv" />
+                  <option value="prim_keccak_fpv.sv" />
+                  <option value="prim_esc_rxtx_assert_fpv.sv" />
+                  <option value="prim_fifo_sync_assert_fpv.sv" />
+                  <option value="prim_arbiter_fixed.sv" />
+                  <option value="prim_diff_decode.sv" />
+                  <option value="prim_multibit_sync.sv" />
+                  <option value="ibex_branch_predict.sv" />
                 </set>
               </option>
             </Define>
@@ -954,6 +1104,11 @@
                   <option value="ibex_core.sv" />
                   <option value="ibex_id_stage.sv" />
                   <option value="ibex_controller.sv" />
+                  <option value="ibex_icache_ecc_protocol_checker.sv" />
+                  <option value="ibex_icache_mem_protocol_checker.sv" />
+                  <option value="ibex_icache_core_protocol_checker.sv" />
+                  <option value="ibex_if_stage.sv" />
+                  <option value="ibex_branch_predict.sv" />
                 </set>
               </option>
             </Define>
@@ -1049,6 +1204,12 @@
                   <option value="prim_ram_1p_scr.sv" />
                   <option value="prim_keccak.sv" />
                   <option value="prim_gf_mult.sv" />
+                  <option value="prim_lfsr_tb.sv" />
+                  <option value="prim_fifo_sync_assert_fpv.sv" />
+                  <option value="prim_arbiter_fixed.sv" />
+                  <option value="prim_multibit_sync.sv" />
+                  <option value="prim_prince.sv" />
+                  <option value="prim_dom_and_2share.sv" />
                 </set>
               </option>
             </Define>
@@ -1172,6 +1333,8 @@
                   <option value="ibex_icache_core_protocol_checker.sv" />
                   <option value="ibex_core.sv" />
                   <option value="prim_fifo_sync.sv" />
+                  <option value="prim_arbiter_fixed.sv" />
+                  <option value="prim_multibit_sync.sv" />
                 </set>
               </option>
             </Define>
@@ -1248,6 +1411,9 @@
                 <set>
                   <option value="ibex_core.sv" />
                   <option value="ibex_id_stage.sv" />
+                  <option value="ibex_icache_ecc_protocol_checker.sv" />
+                  <option value="ibex_icache_mem_protocol_checker.sv" />
+                  <option value="ibex_icache_core_protocol_checker.sv" />
                 </set>
               </option>
             </Define>
@@ -1566,6 +1732,7 @@
                   <option value="prim_arbiter_tree.sv" />
                   <option value="prim_packer.sv" />
                   <option value="formal_tb.sv" />
+                  <option value="prim_fifo_sync_assert_fpv.sv" />
                 </set>
               </option>
             </Define>
@@ -1631,6 +1798,15 @@
                     <option name="source" value="assertions.svh" />
                   </Body>
                 </list>
+              </option>
+              <option name="dependencies">
+                <set>
+                  <option value="prim_keccak_fpv.sv" />
+                  <option value="prim_alert_rxtx_assert_fpv.sv" />
+                  <option value="prim_esc_rxtx_assert_fpv.sv" />
+                  <option value="prim_alert_rxtx_async_assert_fpv.sv" />
+                  <option value="prim_dom_and_2share.sv" />
+                </set>
               </option>
             </Define>
           </value>
@@ -2665,6 +2841,23 @@
               <option name="dependencies">
                 <set>
                   <option value="ariane_testharness.sv" />
+                  <option value="tb.sv" />
+                  <option value="axi_xbar.sv" />
+                  <option value="axi_dw_converter.sv" />
+                  <option value="axi_iw_converter.sv" />
+                  <option value="axi_serializer.sv" />
+                  <option value="axi_id_remap.sv" />
+                  <option value="axi_cut.sv" />
+                  <option value="axi_modify_address.sv" />
+                  <option value="axi_mux.sv" />
+                  <option value="axi_atop_filter.sv" />
+                  <option value="axi_cdc.sv" />
+                  <option value="axi_cdc_dst.sv" />
+                  <option value="axi_isolate.sv" />
+                  <option value="axi_demux.sv" />
+                  <option value="axi_delayer.sv" />
+                  <option value="axi_multicut.sv" />
+                  <option value="axi_id_serialize.sv" />
                 </set>
               </option>
             </Define>
@@ -2698,6 +2891,23 @@
               <option name="dependencies">
                 <set>
                   <option value="ariane_testharness.sv" />
+                  <option value="tb.sv" />
+                  <option value="axi_xbar.sv" />
+                  <option value="axi_dw_converter.sv" />
+                  <option value="axi_iw_converter.sv" />
+                  <option value="axi_serializer.sv" />
+                  <option value="axi_id_remap.sv" />
+                  <option value="axi_cut.sv" />
+                  <option value="axi_modify_address.sv" />
+                  <option value="axi_mux.sv" />
+                  <option value="axi_atop_filter.sv" />
+                  <option value="axi_cdc.sv" />
+                  <option value="axi_cdc_dst.sv" />
+                  <option value="axi_isolate.sv" />
+                  <option value="axi_demux.sv" />
+                  <option value="axi_delayer.sv" />
+                  <option value="axi_multicut.sv" />
+                  <option value="axi_id_serialize.sv" />
                 </set>
               </option>
             </Define>
@@ -2731,6 +2941,23 @@
               <option name="dependencies">
                 <set>
                   <option value="ariane_testharness.sv" />
+                  <option value="axi_dw_converter.sv" />
+                  <option value="axi_to_axi_lite.sv" />
+                  <option value="axi_iw_converter.sv" />
+                  <option value="axi_xbar.sv" />
+                  <option value="axi_serializer.sv" />
+                  <option value="axi_id_remap.sv" />
+                  <option value="axi_cut.sv" />
+                  <option value="axi_modify_address.sv" />
+                  <option value="axi_mux.sv" />
+                  <option value="axi_atop_filter.sv" />
+                  <option value="axi_cdc.sv" />
+                  <option value="axi_cdc_src.sv" />
+                  <option value="axi_isolate.sv" />
+                  <option value="axi_demux.sv" />
+                  <option value="axi_delayer.sv" />
+                  <option value="axi_multicut.sv" />
+                  <option value="axi_id_serialize.sv" />
                 </set>
               </option>
             </Define>
@@ -2764,6 +2991,23 @@
               <option name="dependencies">
                 <set>
                   <option value="ariane_testharness.sv" />
+                  <option value="axi_dw_converter.sv" />
+                  <option value="axi_to_axi_lite.sv" />
+                  <option value="axi_iw_converter.sv" />
+                  <option value="axi_xbar.sv" />
+                  <option value="axi_serializer.sv" />
+                  <option value="axi_id_remap.sv" />
+                  <option value="axi_cut.sv" />
+                  <option value="axi_modify_address.sv" />
+                  <option value="axi_mux.sv" />
+                  <option value="axi_atop_filter.sv" />
+                  <option value="axi_cdc.sv" />
+                  <option value="axi_cdc_src.sv" />
+                  <option value="axi_isolate.sv" />
+                  <option value="axi_demux.sv" />
+                  <option value="axi_delayer.sv" />
+                  <option value="axi_multicut.sv" />
+                  <option value="axi_id_serialize.sv" />
                 </set>
               </option>
             </Define>
@@ -2797,6 +3041,23 @@
               <option name="dependencies">
                 <set>
                   <option value="ariane_testharness.sv" />
+                  <option value="tb.sv" />
+                  <option value="axi_xbar.sv" />
+                  <option value="axi_dw_converter.sv" />
+                  <option value="axi_iw_converter.sv" />
+                  <option value="axi_serializer.sv" />
+                  <option value="axi_id_remap.sv" />
+                  <option value="axi_cut.sv" />
+                  <option value="axi_modify_address.sv" />
+                  <option value="axi_mux.sv" />
+                  <option value="axi_atop_filter.sv" />
+                  <option value="axi_cdc.sv" />
+                  <option value="axi_cdc_dst.sv" />
+                  <option value="axi_isolate.sv" />
+                  <option value="axi_demux.sv" />
+                  <option value="axi_delayer.sv" />
+                  <option value="axi_multicut.sv" />
+                  <option value="axi_id_serialize.sv" />
                 </set>
               </option>
             </Define>
@@ -2830,6 +3091,23 @@
               <option name="dependencies">
                 <set>
                   <option value="ariane_testharness.sv" />
+                  <option value="axi_dw_converter.sv" />
+                  <option value="axi_to_axi_lite.sv" />
+                  <option value="axi_iw_converter.sv" />
+                  <option value="axi_xbar.sv" />
+                  <option value="axi_serializer.sv" />
+                  <option value="axi_id_remap.sv" />
+                  <option value="axi_cut.sv" />
+                  <option value="axi_modify_address.sv" />
+                  <option value="axi_mux.sv" />
+                  <option value="axi_atop_filter.sv" />
+                  <option value="axi_cdc.sv" />
+                  <option value="axi_cdc_src.sv" />
+                  <option value="axi_isolate.sv" />
+                  <option value="axi_demux.sv" />
+                  <option value="axi_delayer.sv" />
+                  <option value="axi_multicut.sv" />
+                  <option value="axi_id_serialize.sv" />
                 </set>
               </option>
             </Define>
@@ -2863,6 +3141,23 @@
               <option name="dependencies">
                 <set>
                   <option value="ariane_testharness.sv" />
+                  <option value="tb.sv" />
+                  <option value="axi_xbar.sv" />
+                  <option value="axi_dw_converter.sv" />
+                  <option value="axi_iw_converter.sv" />
+                  <option value="axi_serializer.sv" />
+                  <option value="axi_id_remap.sv" />
+                  <option value="axi_cut.sv" />
+                  <option value="axi_modify_address.sv" />
+                  <option value="axi_mux.sv" />
+                  <option value="axi_atop_filter.sv" />
+                  <option value="axi_cdc.sv" />
+                  <option value="axi_cdc_dst.sv" />
+                  <option value="axi_isolate.sv" />
+                  <option value="axi_demux.sv" />
+                  <option value="axi_delayer.sv" />
+                  <option value="axi_multicut.sv" />
+                  <option value="axi_id_serialize.sv" />
                 </set>
               </option>
             </Define>
@@ -3652,6 +3947,18 @@
                   </Body>
                 </list>
               </option>
+              <option name="dependencies">
+                <set>
+                  <option value="axi_lite_mux.sv" />
+                  <option value="axi_to_axi_lite.sv" />
+                  <option value="axi_cut.sv" />
+                  <option value="axi_lite_demux.sv" />
+                  <option value="axi_lite_xbar.sv" />
+                  <option value="axi_cdc.sv" />
+                  <option value="axi_cdc_dst.sv" />
+                  <option value="axi_multicut.sv" />
+                </set>
+              </option>
             </Define>
           </value>
         </entry>
@@ -3679,6 +3986,18 @@
                     <option name="source" value="assign.svh" />
                   </Body>
                 </list>
+              </option>
+              <option name="dependencies">
+                <set>
+                  <option value="axi_lite_mux.sv" />
+                  <option value="axi_to_axi_lite.sv" />
+                  <option value="axi_cut.sv" />
+                  <option value="axi_lite_demux.sv" />
+                  <option value="axi_lite_xbar.sv" />
+                  <option value="axi_cdc.sv" />
+                  <option value="axi_cdc_dst.sv" />
+                  <option value="axi_multicut.sv" />
+                </set>
               </option>
             </Define>
           </value>
@@ -3708,6 +4027,21 @@
                   </Body>
                 </list>
               </option>
+              <option name="dependencies">
+                <set>
+                  <option value="axi_lite_regs.sv" />
+                  <option value="axi_lite_mux.sv" />
+                  <option value="axi_cut.sv" />
+                  <option value="axi_lite_demux.sv" />
+                  <option value="axi_lite_xbar.sv" />
+                  <option value="axi_cdc.sv" />
+                  <option value="axi_cdc_src.sv" />
+                  <option value="axi_lite_mailbox.sv" />
+                  <option value="axi_lite_to_apb.sv" />
+                  <option value="axi_multicut.sv" />
+                  <option value="axi_lite_to_reg.sv" />
+                </set>
+              </option>
             </Define>
           </value>
         </entry>
@@ -3735,6 +4069,21 @@
                     <option name="source" value="assign.svh" />
                   </Body>
                 </list>
+              </option>
+              <option name="dependencies">
+                <set>
+                  <option value="axi_lite_regs.sv" />
+                  <option value="axi_lite_mux.sv" />
+                  <option value="axi_cut.sv" />
+                  <option value="axi_lite_demux.sv" />
+                  <option value="axi_lite_xbar.sv" />
+                  <option value="axi_cdc.sv" />
+                  <option value="axi_cdc_src.sv" />
+                  <option value="axi_lite_mailbox.sv" />
+                  <option value="axi_lite_to_apb.sv" />
+                  <option value="axi_multicut.sv" />
+                  <option value="axi_lite_to_reg.sv" />
+                </set>
               </option>
             </Define>
           </value>
@@ -3764,6 +4113,18 @@
                   </Body>
                 </list>
               </option>
+              <option name="dependencies">
+                <set>
+                  <option value="axi_lite_mux.sv" />
+                  <option value="axi_to_axi_lite.sv" />
+                  <option value="axi_cut.sv" />
+                  <option value="axi_lite_demux.sv" />
+                  <option value="axi_lite_xbar.sv" />
+                  <option value="axi_cdc.sv" />
+                  <option value="axi_cdc_dst.sv" />
+                  <option value="axi_multicut.sv" />
+                </set>
+              </option>
             </Define>
           </value>
         </entry>
@@ -3792,6 +4153,21 @@
                   </Body>
                 </list>
               </option>
+              <option name="dependencies">
+                <set>
+                  <option value="axi_lite_regs.sv" />
+                  <option value="axi_lite_mux.sv" />
+                  <option value="axi_cut.sv" />
+                  <option value="axi_lite_demux.sv" />
+                  <option value="axi_lite_xbar.sv" />
+                  <option value="axi_cdc.sv" />
+                  <option value="axi_cdc_src.sv" />
+                  <option value="axi_lite_mailbox.sv" />
+                  <option value="axi_lite_to_apb.sv" />
+                  <option value="axi_multicut.sv" />
+                  <option value="axi_lite_to_reg.sv" />
+                </set>
+              </option>
             </Define>
           </value>
         </entry>
@@ -3819,6 +4195,18 @@
                     <option name="source" value="assign.svh" />
                   </Body>
                 </list>
+              </option>
+              <option name="dependencies">
+                <set>
+                  <option value="axi_lite_mux.sv" />
+                  <option value="axi_to_axi_lite.sv" />
+                  <option value="axi_cut.sv" />
+                  <option value="axi_lite_demux.sv" />
+                  <option value="axi_lite_xbar.sv" />
+                  <option value="axi_cdc.sv" />
+                  <option value="axi_cdc_dst.sv" />
+                  <option value="axi_multicut.sv" />
+                </set>
               </option>
             </Define>
           </value>
@@ -4373,6 +4761,21 @@
                   </Body>
                 </list>
               </option>
+              <option name="dependencies">
+                <set>
+                  <option value="axi_lite_regs.sv" />
+                  <option value="axi_lite_mux.sv" />
+                  <option value="axi_cut.sv" />
+                  <option value="axi_lite_demux.sv" />
+                  <option value="axi_lite_xbar.sv" />
+                  <option value="axi_cdc.sv" />
+                  <option value="axi_cdc_src.sv" />
+                  <option value="axi_lite_mailbox.sv" />
+                  <option value="axi_lite_to_apb.sv" />
+                  <option value="axi_multicut.sv" />
+                  <option value="axi_lite_to_reg.sv" />
+                </set>
+              </option>
             </Define>
           </value>
         </entry>
@@ -4400,6 +4803,21 @@
                     <option name="source" value="assign.svh" />
                   </Body>
                 </list>
+              </option>
+              <option name="dependencies">
+                <set>
+                  <option value="axi_lite_regs.sv" />
+                  <option value="axi_lite_mux.sv" />
+                  <option value="axi_cut.sv" />
+                  <option value="axi_lite_demux.sv" />
+                  <option value="axi_lite_xbar.sv" />
+                  <option value="axi_cdc.sv" />
+                  <option value="axi_cdc_src.sv" />
+                  <option value="axi_lite_mailbox.sv" />
+                  <option value="axi_lite_to_apb.sv" />
+                  <option value="axi_multicut.sv" />
+                  <option value="axi_lite_to_reg.sv" />
+                </set>
               </option>
             </Define>
           </value>
@@ -4429,6 +4847,18 @@
                   </Body>
                 </list>
               </option>
+              <option name="dependencies">
+                <set>
+                  <option value="axi_lite_mux.sv" />
+                  <option value="axi_to_axi_lite.sv" />
+                  <option value="axi_cut.sv" />
+                  <option value="axi_lite_demux.sv" />
+                  <option value="axi_lite_xbar.sv" />
+                  <option value="axi_cdc.sv" />
+                  <option value="axi_cdc_dst.sv" />
+                  <option value="axi_multicut.sv" />
+                </set>
+              </option>
             </Define>
           </value>
         </entry>
@@ -4456,6 +4886,18 @@
                     <option name="source" value="assign.svh" />
                   </Body>
                 </list>
+              </option>
+              <option name="dependencies">
+                <set>
+                  <option value="axi_lite_mux.sv" />
+                  <option value="axi_to_axi_lite.sv" />
+                  <option value="axi_cut.sv" />
+                  <option value="axi_lite_demux.sv" />
+                  <option value="axi_lite_xbar.sv" />
+                  <option value="axi_cdc.sv" />
+                  <option value="axi_cdc_dst.sv" />
+                  <option value="axi_multicut.sv" />
+                </set>
               </option>
             </Define>
           </value>
@@ -4485,6 +4927,21 @@
                   </Body>
                 </list>
               </option>
+              <option name="dependencies">
+                <set>
+                  <option value="axi_lite_regs.sv" />
+                  <option value="axi_lite_mux.sv" />
+                  <option value="axi_cut.sv" />
+                  <option value="axi_lite_demux.sv" />
+                  <option value="axi_lite_xbar.sv" />
+                  <option value="axi_cdc.sv" />
+                  <option value="axi_cdc_src.sv" />
+                  <option value="axi_lite_mailbox.sv" />
+                  <option value="axi_lite_to_apb.sv" />
+                  <option value="axi_multicut.sv" />
+                  <option value="axi_lite_to_reg.sv" />
+                </set>
+              </option>
             </Define>
           </value>
         </entry>
@@ -4513,6 +4970,18 @@
                   </Body>
                 </list>
               </option>
+              <option name="dependencies">
+                <set>
+                  <option value="axi_lite_mux.sv" />
+                  <option value="axi_to_axi_lite.sv" />
+                  <option value="axi_cut.sv" />
+                  <option value="axi_lite_demux.sv" />
+                  <option value="axi_lite_xbar.sv" />
+                  <option value="axi_cdc.sv" />
+                  <option value="axi_cdc_dst.sv" />
+                  <option value="axi_multicut.sv" />
+                </set>
+              </option>
             </Define>
           </value>
         </entry>
@@ -4540,6 +5009,21 @@
                     <option name="source" value="assign.svh" />
                   </Body>
                 </list>
+              </option>
+              <option name="dependencies">
+                <set>
+                  <option value="axi_lite_regs.sv" />
+                  <option value="axi_lite_mux.sv" />
+                  <option value="axi_cut.sv" />
+                  <option value="axi_lite_demux.sv" />
+                  <option value="axi_lite_xbar.sv" />
+                  <option value="axi_cdc.sv" />
+                  <option value="axi_cdc_src.sv" />
+                  <option value="axi_lite_mailbox.sv" />
+                  <option value="axi_lite_to_apb.sv" />
+                  <option value="axi_multicut.sv" />
+                  <option value="axi_lite_to_reg.sv" />
+                </set>
               </option>
             </Define>
           </value>
@@ -5453,6 +5937,23 @@
               <option name="dependencies">
                 <set>
                   <option value="ariane_testharness.sv" />
+                  <option value="axi_dw_converter.sv" />
+                  <option value="axi_to_axi_lite.sv" />
+                  <option value="axi_iw_converter.sv" />
+                  <option value="axi_xbar.sv" />
+                  <option value="axi_serializer.sv" />
+                  <option value="axi_id_remap.sv" />
+                  <option value="axi_cut.sv" />
+                  <option value="axi_modify_address.sv" />
+                  <option value="axi_mux.sv" />
+                  <option value="axi_atop_filter.sv" />
+                  <option value="axi_cdc.sv" />
+                  <option value="axi_cdc_src.sv" />
+                  <option value="axi_isolate.sv" />
+                  <option value="axi_demux.sv" />
+                  <option value="axi_delayer.sv" />
+                  <option value="axi_multicut.sv" />
+                  <option value="axi_id_serialize.sv" />
                 </set>
               </option>
             </Define>
@@ -5486,6 +5987,23 @@
               <option name="dependencies">
                 <set>
                   <option value="ariane_testharness.sv" />
+                  <option value="axi_dw_converter.sv" />
+                  <option value="axi_to_axi_lite.sv" />
+                  <option value="axi_iw_converter.sv" />
+                  <option value="axi_xbar.sv" />
+                  <option value="axi_serializer.sv" />
+                  <option value="axi_id_remap.sv" />
+                  <option value="axi_cut.sv" />
+                  <option value="axi_modify_address.sv" />
+                  <option value="axi_mux.sv" />
+                  <option value="axi_atop_filter.sv" />
+                  <option value="axi_cdc.sv" />
+                  <option value="axi_cdc_src.sv" />
+                  <option value="axi_isolate.sv" />
+                  <option value="axi_demux.sv" />
+                  <option value="axi_delayer.sv" />
+                  <option value="axi_multicut.sv" />
+                  <option value="axi_id_serialize.sv" />
                 </set>
               </option>
             </Define>
@@ -5519,6 +6037,23 @@
               <option name="dependencies">
                 <set>
                   <option value="ariane_testharness.sv" />
+                  <option value="tb.sv" />
+                  <option value="axi_xbar.sv" />
+                  <option value="axi_dw_converter.sv" />
+                  <option value="axi_iw_converter.sv" />
+                  <option value="axi_serializer.sv" />
+                  <option value="axi_id_remap.sv" />
+                  <option value="axi_cut.sv" />
+                  <option value="axi_mux.sv" />
+                  <option value="axi_modify_address.sv" />
+                  <option value="axi_atop_filter.sv" />
+                  <option value="axi_cdc.sv" />
+                  <option value="axi_cdc_dst.sv" />
+                  <option value="axi_isolate.sv" />
+                  <option value="axi_demux.sv" />
+                  <option value="axi_delayer.sv" />
+                  <option value="axi_multicut.sv" />
+                  <option value="axi_id_serialize.sv" />
                 </set>
               </option>
             </Define>
@@ -5552,6 +6087,23 @@
               <option name="dependencies">
                 <set>
                   <option value="ariane_testharness.sv" />
+                  <option value="tb.sv" />
+                  <option value="axi_xbar.sv" />
+                  <option value="axi_dw_converter.sv" />
+                  <option value="axi_iw_converter.sv" />
+                  <option value="axi_serializer.sv" />
+                  <option value="axi_id_remap.sv" />
+                  <option value="axi_cut.sv" />
+                  <option value="axi_mux.sv" />
+                  <option value="axi_modify_address.sv" />
+                  <option value="axi_atop_filter.sv" />
+                  <option value="axi_cdc.sv" />
+                  <option value="axi_cdc_dst.sv" />
+                  <option value="axi_isolate.sv" />
+                  <option value="axi_demux.sv" />
+                  <option value="axi_delayer.sv" />
+                  <option value="axi_multicut.sv" />
+                  <option value="axi_id_serialize.sv" />
                 </set>
               </option>
             </Define>
@@ -5585,6 +6137,23 @@
               <option name="dependencies">
                 <set>
                   <option value="ariane_testharness.sv" />
+                  <option value="axi_dw_converter.sv" />
+                  <option value="axi_to_axi_lite.sv" />
+                  <option value="axi_iw_converter.sv" />
+                  <option value="axi_xbar.sv" />
+                  <option value="axi_serializer.sv" />
+                  <option value="axi_id_remap.sv" />
+                  <option value="axi_cut.sv" />
+                  <option value="axi_modify_address.sv" />
+                  <option value="axi_mux.sv" />
+                  <option value="axi_atop_filter.sv" />
+                  <option value="axi_cdc.sv" />
+                  <option value="axi_cdc_src.sv" />
+                  <option value="axi_isolate.sv" />
+                  <option value="axi_demux.sv" />
+                  <option value="axi_delayer.sv" />
+                  <option value="axi_multicut.sv" />
+                  <option value="axi_id_serialize.sv" />
                 </set>
               </option>
             </Define>
@@ -5618,6 +6187,23 @@
               <option name="dependencies">
                 <set>
                   <option value="ariane_testharness.sv" />
+                  <option value="tb.sv" />
+                  <option value="axi_xbar.sv" />
+                  <option value="axi_dw_converter.sv" />
+                  <option value="axi_iw_converter.sv" />
+                  <option value="axi_serializer.sv" />
+                  <option value="axi_id_remap.sv" />
+                  <option value="axi_cut.sv" />
+                  <option value="axi_mux.sv" />
+                  <option value="axi_modify_address.sv" />
+                  <option value="axi_atop_filter.sv" />
+                  <option value="axi_cdc.sv" />
+                  <option value="axi_cdc_dst.sv" />
+                  <option value="axi_isolate.sv" />
+                  <option value="axi_demux.sv" />
+                  <option value="axi_delayer.sv" />
+                  <option value="axi_multicut.sv" />
+                  <option value="axi_id_serialize.sv" />
                 </set>
               </option>
             </Define>
@@ -5651,6 +6237,23 @@
               <option name="dependencies">
                 <set>
                   <option value="ariane_testharness.sv" />
+                  <option value="axi_dw_converter.sv" />
+                  <option value="axi_to_axi_lite.sv" />
+                  <option value="axi_iw_converter.sv" />
+                  <option value="axi_xbar.sv" />
+                  <option value="axi_serializer.sv" />
+                  <option value="axi_id_remap.sv" />
+                  <option value="axi_cut.sv" />
+                  <option value="axi_modify_address.sv" />
+                  <option value="axi_mux.sv" />
+                  <option value="axi_atop_filter.sv" />
+                  <option value="axi_cdc.sv" />
+                  <option value="axi_cdc_src.sv" />
+                  <option value="axi_isolate.sv" />
+                  <option value="axi_demux.sv" />
+                  <option value="axi_delayer.sv" />
+                  <option value="axi_multicut.sv" />
+                  <option value="axi_id_serialize.sv" />
                 </set>
               </option>
             </Define>
@@ -7643,6 +8246,141 @@
             </Define>
           </value>
         </entry>
+        <entry key="DIVUIntellijIdeaRulezzz">
+          <value>
+            <Define>
+              <option name="definitions">
+                <list>
+                  <Body>
+                    <option name="offset" value="2702" />
+                    <option name="replacementList" value="_OP          7'b0110011" />
+                    <option name="source" value="ctr.sv" />
+                  </Body>
+                </list>
+              </option>
+            </Define>
+          </value>
+        </entry>
+        <entry key="DIVU_FUNCT_3">
+          <value>
+            <Define>
+              <option name="definitions">
+                <list>
+                  <Body>
+                    <option name="offset" value="2957" />
+                    <option name="replacementList" value="3'b101" />
+                    <option name="source" value="ctr.sv" />
+                  </Body>
+                </list>
+              </option>
+            </Define>
+          </value>
+        </entry>
+        <entry key="DIVU_FUNCT_7">
+          <value>
+            <Define>
+              <option name="definitions">
+                <list>
+                  <Body>
+                    <option name="offset" value="2977" />
+                    <option name="replacementList" value="7'b0000001" />
+                    <option name="source" value="ctr.sv" />
+                  </Body>
+                </list>
+              </option>
+            </Define>
+          </value>
+        </entry>
+        <entry key="DIVU_OP">
+          <value>
+            <Define>
+              <option name="definitions">
+                <list>
+                  <Body>
+                    <option name="offset" value="2702" />
+                    <option name="replacementList" value="7'b0110011" />
+                    <option name="source" value="ctr.sv" />
+                  </Body>
+                </list>
+              </option>
+            </Define>
+          </value>
+        </entry>
+        <entry key="DIV_FUNCT_3">
+          <value>
+            <Define>
+              <option name="definitions">
+                <list>
+                  <Body>
+                    <option name="offset" value="2926" />
+                    <option name="replacementList" value="3'b100" />
+                    <option name="source" value="ctr.sv" />
+                  </Body>
+                </list>
+              </option>
+            </Define>
+          </value>
+        </entry>
+        <entry key="DIV_FUNCT_7">
+          <value>
+            <Define>
+              <option name="definitions">
+                <list>
+                  <Body>
+                    <option name="offset" value="2942" />
+                    <option name="replacementList" value="7'b0000001" />
+                    <option name="source" value="ctr.sv" />
+                  </Body>
+                </list>
+              </option>
+            </Define>
+          </value>
+        </entry>
+        <entry key="DIV_OP">
+          <value>
+            <Define>
+              <option name="definitions">
+                <list>
+                  <Body>
+                    <option name="offset" value="2667" />
+                    <option name="replacementList" value="7'b0110011" />
+                    <option name="source" value="ctr.sv" />
+                  </Body>
+                </list>
+              </option>
+            </Define>
+          </value>
+        </entry>
+        <entry key="DI_OP">
+          <value>
+            <Define>
+              <option name="definitions">
+                <list>
+                  <Body>
+                    <option name="offset" value="2667" />
+                    <option name="replacementList" value="7'b0110011" />
+                    <option name="source" value="ctr.sv" />
+                  </Body>
+                </list>
+              </option>
+            </Define>
+          </value>
+        </entry>
+        <entry key="DIntellijIdeaRulezzz">
+          <value>
+            <Define>
+              <option name="definitions">
+                <list>
+                  <Body>
+                    <option name="offset" value="2667" />
+                    <option name="replacementList" value="_OP          7'b0110011" />
+                    <option name="source" value="ctr.sv" />
+                  </Body>
+                </list>
+              </option>
+            </Define>
+          </value>
+        </entry>
         <entry key="DV">
           <value>
             <Define>
@@ -8003,6 +8741,7 @@
                   <option value="core_ibex_base_test.sv" />
                   <option value="ibex_icache_scoreboard.sv" />
                   <option value="dv_base_vseq.sv" />
+                  <option value="ibex_icache_env.sv" />
                 </set>
               </option>
             </Define>
@@ -8044,6 +8783,7 @@
                   <option value="core_ibex_test_lib.sv" />
                   <option value="core_ibex_base_test.sv" />
                   <option value="dv_base_vseq.sv" />
+                  <option value="ibex_icache_env.sv" />
                 </set>
               </option>
             </Define>
@@ -8335,6 +9075,7 @@
               <option name="dependencies">
                 <set>
                   <option value="ibex_icache_scoreboard.sv" />
+                  <option value="ibex_icache_oldval_test.sv" />
                 </set>
               </option>
             </Define>
@@ -8373,6 +9114,7 @@
               <option name="dependencies">
                 <set>
                   <option value="ibex_icache_scoreboard.sv" />
+                  <option value="ibex_icache_oldval_test.sv" />
                 </set>
               </option>
             </Define>
@@ -9485,6 +10227,21 @@
             </Define>
           </value>
         </entry>
+        <entry key="D_OP">
+          <value>
+            <Define>
+              <option name="definitions">
+                <list>
+                  <Body>
+                    <option name="offset" value="2667" />
+                    <option name="replacementList" value="7'b0110011" />
+                    <option name="source" value="ctr.sv" />
+                  </Body>
+                </list>
+              </option>
+            </Define>
+          </value>
+        </entry>
         <entry key="ENABLE_BIT">
           <value>
             <Define>
@@ -10573,6 +11330,7 @@
               <option name="dependencies">
                 <set>
                   <option value="ibex_core.sv" />
+                  <option value="ibex_if_stage.sv" />
                 </set>
               </option>
             </Define>
@@ -11162,6 +11920,20 @@
             </Define>
           </value>
         </entry>
+        <entry key="M">
+          <value>
+            <Define>
+              <option name="definitions">
+                <list>
+                  <Body>
+                    <option name="offset" value="2521" />
+                    <option name="source" value="ctr.sv" />
+                  </Body>
+                </list>
+              </option>
+            </Define>
+          </value>
+        </entry>
         <entry key="MAIN_MEM">
           <value>
             <Define>
@@ -11204,6 +11976,346 @@
             </Define>
           </value>
         </entry>
+        <entry key="MIntellijIdeaRulezzz">
+          <value>
+            <Define>
+              <option name="definitions">
+                <list>
+                  <Body>
+                    <option name="offset" value="2521" />
+                    <option name="source" value="ctr.sv" />
+                  </Body>
+                </list>
+              </option>
+            </Define>
+          </value>
+        </entry>
+        <entry key="MU">
+          <value>
+            <Define>
+              <option name="definitions">
+                <list>
+                  <Body>
+                    <option name="offset" value="2521" />
+                    <option name="source" value="ctr.sv" />
+                  </Body>
+                </list>
+              </option>
+            </Define>
+          </value>
+        </entry>
+        <entry key="MUL">
+          <value>
+            <Define>
+              <option name="definitions">
+                <list>
+                  <Body>
+                    <option name="offset" value="2521" />
+                    <option name="source" value="ctr.sv" />
+                  </Body>
+                </list>
+              </option>
+            </Define>
+          </value>
+        </entry>
+        <entry key="MULHIntellijIdeaRulezzz">
+          <value>
+            <Define>
+              <option name="definitions">
+                <list>
+                  <Body>
+                    <option name="offset" value="2556" />
+                    <option name="replacementList" value="_OP          7'b0110011" />
+                    <option name="source" value="ctr.sv" />
+                  </Body>
+                </list>
+              </option>
+            </Define>
+          </value>
+        </entry>
+        <entry key="MULHSIntellijIdeaRulezzz">
+          <value>
+            <Define>
+              <option name="definitions">
+                <list>
+                  <Body>
+                    <option name="offset" value="2592" />
+                    <option name="replacementList" value="_OP          7'b0110011" />
+                    <option name="source" value="ctr.sv" />
+                  </Body>
+                </list>
+              </option>
+            </Define>
+          </value>
+        </entry>
+        <entry key="MULHSU_FUNCT_3">
+          <value>
+            <Define>
+              <option name="definitions">
+                <list>
+                  <Body>
+                    <option name="offset" value="2864" />
+                    <option name="replacementList" value="3'b010" />
+                    <option name="source" value="ctr.sv" />
+                  </Body>
+                </list>
+              </option>
+            </Define>
+          </value>
+        </entry>
+        <entry key="MULHSU_FUNCT_7">
+          <value>
+            <Define>
+              <option name="definitions">
+                <list>
+                  <Body>
+                    <option name="offset" value="2872" />
+                    <option name="replacementList" value="7'b0000001" />
+                    <option name="source" value="ctr.sv" />
+                  </Body>
+                </list>
+              </option>
+            </Define>
+          </value>
+        </entry>
+        <entry key="MULHSU_OP">
+          <value>
+            <Define>
+              <option name="definitions">
+                <list>
+                  <Body>
+                    <option name="offset" value="2592" />
+                    <option name="replacementList" value="7'b0110011" />
+                    <option name="source" value="ctr.sv" />
+                  </Body>
+                </list>
+              </option>
+            </Define>
+          </value>
+        </entry>
+        <entry key="MULHS_OP">
+          <value>
+            <Define>
+              <option name="definitions">
+                <list>
+                  <Body>
+                    <option name="offset" value="2592" />
+                    <option name="replacementList" value="7'b0110011" />
+                    <option name="source" value="ctr.sv" />
+                  </Body>
+                </list>
+              </option>
+            </Define>
+          </value>
+        </entry>
+        <entry key="MULHUIntellijIdeaRulezzz">
+          <value>
+            <Define>
+              <option name="definitions">
+                <list>
+                  <Body>
+                    <option name="offset" value="2630" />
+                    <option name="replacementList" value="_OP          7'b0110011" />
+                    <option name="source" value="ctr.sv" />
+                  </Body>
+                </list>
+              </option>
+            </Define>
+          </value>
+        </entry>
+        <entry key="MULHU_FUNCT_3">
+          <value>
+            <Define>
+              <option name="definitions">
+                <list>
+                  <Body>
+                    <option name="offset" value="2895" />
+                    <option name="replacementList" value="3'b011" />
+                    <option name="source" value="ctr.sv" />
+                  </Body>
+                </list>
+              </option>
+            </Define>
+          </value>
+        </entry>
+        <entry key="MULHU_FUNCT_7">
+          <value>
+            <Define>
+              <option name="definitions">
+                <list>
+                  <Body>
+                    <option name="offset" value="2907" />
+                    <option name="replacementList" value="7'b0000001" />
+                    <option name="source" value="ctr.sv" />
+                  </Body>
+                </list>
+              </option>
+            </Define>
+          </value>
+        </entry>
+        <entry key="MULHU_OP">
+          <value>
+            <Define>
+              <option name="definitions">
+                <list>
+                  <Body>
+                    <option name="offset" value="2630" />
+                    <option name="replacementList" value="7'b0110011" />
+                    <option name="source" value="ctr.sv" />
+                  </Body>
+                </list>
+              </option>
+            </Define>
+          </value>
+        </entry>
+        <entry key="MULH_FUNCT_3">
+          <value>
+            <Define>
+              <option name="definitions">
+                <list>
+                  <Body>
+                    <option name="offset" value="2833" />
+                    <option name="replacementList" value="3'b001" />
+                    <option name="source" value="ctr.sv" />
+                  </Body>
+                </list>
+              </option>
+            </Define>
+          </value>
+        </entry>
+        <entry key="MULH_FUNCT_7">
+          <value>
+            <Define>
+              <option name="definitions">
+                <list>
+                  <Body>
+                    <option name="offset" value="2837" />
+                    <option name="replacementList" value="7'b0000001" />
+                    <option name="source" value="ctr.sv" />
+                  </Body>
+                </list>
+              </option>
+            </Define>
+          </value>
+        </entry>
+        <entry key="MULH_OP">
+          <value>
+            <Define>
+              <option name="definitions">
+                <list>
+                  <Body>
+                    <option name="offset" value="2556" />
+                    <option name="replacementList" value="7'b0110011" />
+                    <option name="source" value="ctr.sv" />
+                  </Body>
+                </list>
+              </option>
+            </Define>
+          </value>
+        </entry>
+        <entry key="MUL_">
+          <value>
+            <Define>
+              <option name="definitions">
+                <list>
+                  <Body>
+                    <option name="offset" value="2521" />
+                    <option name="source" value="ctr.sv" />
+                  </Body>
+                </list>
+              </option>
+            </Define>
+          </value>
+        </entry>
+        <entry key="MUL_FUNCT_3">
+          <value>
+            <Define>
+              <option name="definitions">
+                <list>
+                  <Body>
+                    <option name="offset" value="2802" />
+                    <option name="replacementList" value="3'b000" />
+                    <option name="source" value="ctr.sv" />
+                  </Body>
+                </list>
+              </option>
+            </Define>
+          </value>
+        </entry>
+        <entry key="MUL_FUNCT_7">
+          <value>
+            <Define>
+              <option name="definitions">
+                <list>
+                  <Body>
+                    <option name="offset" value="2802" />
+                    <option name="replacementList" value="7'b0000001" />
+                    <option name="source" value="ctr.sv" />
+                  </Body>
+                </list>
+              </option>
+            </Define>
+          </value>
+        </entry>
+        <entry key="MUL_O">
+          <value>
+            <Define>
+              <option name="definitions">
+                <list>
+                  <Body>
+                    <option name="offset" value="2521" />
+                    <option name="source" value="ctr.sv" />
+                  </Body>
+                </list>
+              </option>
+            </Define>
+          </value>
+        </entry>
+        <entry key="MUL_OP">
+          <value>
+            <Define>
+              <option name="definitions">
+                <list>
+                  <Body>
+                    <option name="offset" value="2521" />
+                    <option name="replacementList" value="7'b0110011" />
+                    <option name="source" value="ctr.sv" />
+                  </Body>
+                </list>
+              </option>
+            </Define>
+          </value>
+        </entry>
+        <entry key="MU_OP">
+          <value>
+            <Define>
+              <option name="definitions">
+                <list>
+                  <Body>
+                    <option name="offset" value="2667" />
+                    <option name="replacementList" value="7'b0110011" />
+                    <option name="source" value="ctr.sv" />
+                  </Body>
+                </list>
+              </option>
+            </Define>
+          </value>
+        </entry>
+        <entry key="M_OP">
+          <value>
+            <Define>
+              <option name="definitions">
+                <list>
+                  <Body>
+                    <option name="offset" value="2667" />
+                    <option name="replacementList" value="7'b0110011" />
+                    <option name="source" value="ctr.sv" />
+                  </Body>
+                </list>
+              </option>
+            </Define>
+          </value>
+        </entry>
         <entry key="NO_OP">
           <value>
             <Define>
@@ -11218,6 +12330,16 @@
                     <option name="offset" value="8" />
                     <option name="replacementList" value="32'h00000013" />
                     <option name="source" value="mem.sv" />
+                  </Body>
+                  <Body>
+                    <option name="offset" value="8" />
+                    <option name="replacementList" value="32'h0" />
+                    <option name="source" value="instr_mem_2.sv" />
+                  </Body>
+                  <Body>
+                    <option name="offset" value="8" />
+                    <option name="replacementList" value="32'h0" />
+                    <option name="source" value="instr_mem_1.sv" />
                   </Body>
                 </list>
               </option>
@@ -11951,6 +13073,156 @@
             </Define>
           </value>
         </entry>
+        <entry key="REIntellijIdeaRulezzz">
+          <value>
+            <Define>
+              <option name="definitions">
+                <list>
+                  <Body>
+                    <option name="offset" value="2773" />
+                    <option name="replacementList" value="_OP          7'b0110011" />
+                    <option name="source" value="ctr.sv" />
+                  </Body>
+                </list>
+              </option>
+            </Define>
+          </value>
+        </entry>
+        <entry key="REMIntellijIdeaRulezzz">
+          <value>
+            <Define>
+              <option name="definitions">
+                <list>
+                  <Body>
+                    <option name="offset" value="2773" />
+                    <option name="replacementList" value="_OP          7'b0110011" />
+                    <option name="source" value="ctr.sv" />
+                  </Body>
+                </list>
+              </option>
+            </Define>
+          </value>
+        </entry>
+        <entry key="REMU_FUNCT_3">
+          <value>
+            <Define>
+              <option name="definitions">
+                <list>
+                  <Body>
+                    <option name="offset" value="3019" />
+                    <option name="replacementList" value="3'b111" />
+                    <option name="source" value="ctr.sv" />
+                  </Body>
+                </list>
+              </option>
+            </Define>
+          </value>
+        </entry>
+        <entry key="REMU_FUNCT_7">
+          <value>
+            <Define>
+              <option name="definitions">
+                <list>
+                  <Body>
+                    <option name="offset" value="3047" />
+                    <option name="replacementList" value="7'b0000001" />
+                    <option name="source" value="ctr.sv" />
+                  </Body>
+                </list>
+              </option>
+            </Define>
+          </value>
+        </entry>
+        <entry key="REMU_OP">
+          <value>
+            <Define>
+              <option name="definitions">
+                <list>
+                  <Body>
+                    <option name="offset" value="2773" />
+                    <option name="replacementList" value="7'b0110011" />
+                    <option name="source" value="ctr.sv" />
+                  </Body>
+                </list>
+              </option>
+            </Define>
+          </value>
+        </entry>
+        <entry key="REM_FUNCT_3">
+          <value>
+            <Define>
+              <option name="definitions">
+                <list>
+                  <Body>
+                    <option name="offset" value="2988" />
+                    <option name="replacementList" value="3'b110" />
+                    <option name="source" value="ctr.sv" />
+                  </Body>
+                </list>
+              </option>
+            </Define>
+          </value>
+        </entry>
+        <entry key="REM_FUNCT_7">
+          <value>
+            <Define>
+              <option name="definitions">
+                <list>
+                  <Body>
+                    <option name="offset" value="3012" />
+                    <option name="replacementList" value="7'b0000001" />
+                    <option name="source" value="ctr.sv" />
+                  </Body>
+                </list>
+              </option>
+            </Define>
+          </value>
+        </entry>
+        <entry key="REM_OP">
+          <value>
+            <Define>
+              <option name="definitions">
+                <list>
+                  <Body>
+                    <option name="offset" value="2738" />
+                    <option name="replacementList" value="7'b0110011" />
+                    <option name="source" value="ctr.sv" />
+                  </Body>
+                </list>
+              </option>
+            </Define>
+          </value>
+        </entry>
+        <entry key="RE_OP">
+          <value>
+            <Define>
+              <option name="definitions">
+                <list>
+                  <Body>
+                    <option name="offset" value="2738" />
+                    <option name="replacementList" value="7'b0110011" />
+                    <option name="source" value="ctr.sv" />
+                  </Body>
+                </list>
+              </option>
+            </Define>
+          </value>
+        </entry>
+        <entry key="RIntellijIdeaRulezzz">
+          <value>
+            <Define>
+              <option name="definitions">
+                <list>
+                  <Body>
+                    <option name="offset" value="2738" />
+                    <option name="replacementList" value="_OP          7'b0110011" />
+                    <option name="source" value="ctr.sv" />
+                  </Body>
+                </list>
+              </option>
+            </Define>
+          </value>
+        </entry>
         <entry key="RV32B">
           <value>
             <Define>
@@ -12010,6 +13282,18 @@
                     <option name="offset" value="258" />
                     <option name="source" value="ibex_core.sv" />
                   </Body>
+                  <Body>
+                    <option name="inclusionDependencies">
+                      <list>
+                        <InclusionDependency>
+                          <option name="name" value="RISCV_FORMAL" />
+                          <option name="rule" value="DEFINED" />
+                        </InclusionDependency>
+                      </list>
+                    </option>
+                    <option name="offset" value="30" />
+                    <option name="source" value="top.sv" />
+                  </Body>
                 </list>
               </option>
             </Define>
@@ -12031,6 +13315,21 @@
                     </option>
                     <option name="replacementList" value="`INSTR_CG_BEGIN(INSTR_NAME) &#10;    cp_rs1         : coverpoint instr.rs1; &#10;    cp_rs2         : coverpoint instr.rs2; &#10;    cp_rd          : coverpoint instr.rd;  &#10;    cp_rs1_sign    : coverpoint instr.rs1_sign; &#10;    cp_rs2_sign    : coverpoint instr.rs2_sign; &#10;    cp_rd_sign     : coverpoint instr.rd_sign; &#10;    `DV(cp_gpr_hazard : coverpoint instr.gpr_hazard;)" />
                     <option name="source" value="riscv_instr_cover_group.sv" />
+                  </Body>
+                </list>
+              </option>
+            </Define>
+          </value>
+        </entry>
+        <entry key="R_OP">
+          <value>
+            <Define>
+              <option name="definitions">
+                <list>
+                  <Body>
+                    <option name="offset" value="2738" />
+                    <option name="replacementList" value="7'b0110011" />
+                    <option name="source" value="ctr.sv" />
                   </Body>
                 </list>
               </option>
@@ -13655,6 +14954,21 @@
             </Define>
           </value>
         </entry>
+        <entry key="_OP">
+          <value>
+            <Define>
+              <option name="definitions">
+                <list>
+                  <Body>
+                    <option name="offset" value="2667" />
+                    <option name="replacementList" value="7'b0110011" />
+                    <option name="source" value="ctr.sv" />
+                  </Body>
+                </list>
+              </option>
+            </Define>
+          </value>
+        </entry>
         <entry key="__AXI_LITE_TO_AX">
           <value>
             <Define>
@@ -14700,6 +16014,8 @@
                   <option value="dv_base_vseq.sv" />
                   <option value="ibex_icache_combo_vseq.sv" />
                   <option value="ibex_icache_scoreboard.sv" />
+                  <option value="ibex_icache_env.sv" />
+                  <option value="ibex_icache_oldval_test.sv" />
                 </set>
               </option>
             </Define>
@@ -14974,6 +16290,11 @@
                   </Body>
                 </list>
               </option>
+              <option name="dependencies">
+                <set>
+                  <option value="dv_base_test.sv" />
+                </set>
+              </option>
             </Define>
           </value>
         </entry>
@@ -14994,6 +16315,7 @@
                   <option value="csr_seq_lib.sv" />
                   <option value="ibex_icache_mem_base_seq.sv" />
                   <option value="dv_base_vseq.sv" />
+                  <option value="dv_base_seq.sv" />
                 </set>
               </option>
             </Define>

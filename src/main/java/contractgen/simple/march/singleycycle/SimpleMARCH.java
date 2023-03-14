@@ -24,16 +24,19 @@ import static contractgen.util.FileUtils.copyFileOrFolder;
 import static contractgen.util.FileUtils.replaceString;
 import static contractgen.util.ScriptUtils.runScript;
 
-public
+/**
+ * A simple toy processor
+ */
+public class SimpleMARCH extends MARCH {
 
-
-
-class SimpleMARCH extends MARCH {
-
-    private static final String TEMPLATE_PATH = "/home/yosys/bachelor/simple_proc_template/";
-    protected String BASE_PATH = "/home/yosys/bachelor/simple_proc_generated/";
+    private static final String TEMPLATE_PATH = "/home/yosys/resources/simple/";
+    protected String BASE_PATH = "/home/yosys/output/simple/generated/";
     protected String ADDITIONAL_DEFINITIONS = "";
 
+    /**
+     * @param updater   The updater to be used to update the contract.
+     * @param testCases The test cases to be used for generation or evaluation.
+     */
     public SimpleMARCH(Updater updater, TestCases testCases) {
         super(new SimpleISA(updater, testCases));
     }
@@ -70,7 +73,7 @@ class SimpleMARCH extends MARCH {
     @Override
     public String runCover(int steps) {
         generateCoverSBY(steps, BASE_PATH + "syn/cover/");
-        return runScript(BASE_PATH + "syn/verif.sh", false);
+        return runScript(BASE_PATH + "syn/verif.sh", false, 3600);
     }
 
     private void generateCoverSBY(int steps, String path) {
@@ -103,7 +106,7 @@ class SimpleMARCH extends MARCH {
     @Override
     public boolean run(int steps) {
         generateSBY(steps, BASE_PATH + "syn/run/");
-        runScript(BASE_PATH + "syn/verif.sh", false);
+        runScript(BASE_PATH + "syn/verif.sh", false, 3600);
         if (!Files.exists(Path.of(BASE_PATH + "syn/run/verif/FAIL"))) {
             System.out.println("No violation.");
             return true;
@@ -169,7 +172,7 @@ class SimpleMARCH extends MARCH {
             differences_1.add(new SimpleObservation(instr_1.getType(), SIMPLE_OBSERVATION_TYPE.REG_RS2));
             differences_2.add(new SimpleObservation(instr_2.getType(), SIMPLE_OBSERVATION_TYPE.REG_RS2));
         }
-        return new Pair<>(new SimpleTestResult(differences_1, true), new SimpleTestResult(differences_2, true));
+        return new Pair<>(new SimpleTestResult(differences_1, true, 0), new SimpleTestResult(differences_2, true, 0));
     }
 
     @Override
@@ -178,12 +181,12 @@ class SimpleMARCH extends MARCH {
     }
 
     @Override
-    public Pair<TestResult, TestResult> extractDifferences() {
+    public Pair<TestResult, TestResult> extractDifferences(int index) {
         throw new UnsupportedOperationException("Not implemented");
     }
 
     @Override
-    public Pair<TestResult, TestResult> extractDifferences(int id) {
+    public Pair<TestResult, TestResult> extractDifferences(int id, int index) {
         throw new UnsupportedOperationException("Not implemented");
     }
 
@@ -229,12 +232,12 @@ class SimpleMARCH extends MARCH {
     }
 
     @Override
-    public boolean simulate() {
+    public SIMULATION_RESULT simulate() {
         throw new UnsupportedOperationException("Not implemented");
     }
 
     @Override
-    public boolean simulate(int id) {
+    public SIMULATION_RESULT simulate(int id) {
         throw new UnsupportedOperationException("Not implemented");
     }
 

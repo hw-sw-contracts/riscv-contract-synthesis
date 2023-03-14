@@ -38,7 +38,7 @@ module control (
         if (!enable_2_o || (fetch_2_count >= MAX_INSTR_COUNT && fetch_2_i))
             enable_2_o = 0;
 
-        if (!enable_1_o && !enable_2_o && retire_count == MAX_INSTR_COUNT)
+        if ((!enable_1_o && !enable_2_o) || retire_count >= MAX_INSTR_COUNT)
             finished_o <= 1;
         
     end

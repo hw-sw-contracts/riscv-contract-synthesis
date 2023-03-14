@@ -211,7 +211,7 @@ module load_store_unit import ariane_pkg::*; #(
 
         assign itlb_miss_o = 1'b0;
         assign dtlb_miss_o = 1'b0;
-        assign dtlb_ppn    = mmu_vaddr[riscv::PLEN-1:12];
+        assign dtlb_ppn    = (riscv::XLEN == 32) ? {2'b0, mmu_vaddr[riscv::VLEN-1:12]} : mmu_vaddr[riscv::PLEN-1:12];
         assign dtlb_hit    = 1'b1;
 
         assign mmu_exception = '0;
@@ -221,7 +221,7 @@ module load_store_unit import ariane_pkg::*; #(
                 mmu_paddr         <= '0;
                 translation_valid <= '0;
             end else begin
-                mmu_paddr         <=  mmu_vaddr[riscv::PLEN-1:0];
+                mmu_paddr         <=  (riscv::XLEN == 32) ? {2'b0, mmu_vaddr[riscv::VLEN-1:0]} : mmu_vaddr[riscv::PLEN-1:0];
                 translation_valid <= translation_req;
             end
         end
@@ -335,8 +335,8 @@ module load_store_unit import ariane_pkg::*; #(
         st_valid_i <= 0;
         ld_valid_i <= 0;
       end else begin
-        st_valid_i <= st_valid_n;
-        ld_valid_i <= ld_valid_n;
+        st_valid_i <= st_valid_n & lsu_valid_i;
+        ld_valid_i <= ld_valid_n & lsu_valid_i;
       end
     end
     always_comb begin : which_op

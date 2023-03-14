@@ -1,0 +1,23 @@
+[options]
+mode cover
+depth /* Number Steps */
+append 25
+multiclock on
+
+[engines]
+smtbmc z3
+
+[script]
+read -formal -sv core.v core_pipeline.v instr_mem_1.v instr_mem_2.v atk.v ctr.v clk_sync.v control.v top.v 
+prep -top top
+
+[files]
+core.v
+core_pipeline.v
+instr_mem_1.v
+instr_mem_2.v
+atk.v
+ctr.v
+clk_sync.v
+control.v
+top.v

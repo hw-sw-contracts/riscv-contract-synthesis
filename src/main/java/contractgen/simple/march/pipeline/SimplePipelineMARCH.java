@@ -18,8 +18,15 @@ import java.util.Set;
 
 import static contractgen.util.ScriptUtils.runScript;
 
+/**
+ * The pipelined version of the simple toy processor.
+ */
 public class SimplePipelineMARCH extends SimpleMARCH {
 
+    /**
+     * @param updater   The updater to be used to update the contract.
+     * @param testCases The test cases to be used for generation or evaluation.
+     */
     public SimplePipelineMARCH(Updater updater, TestCases testCases) {
         super(updater, testCases);
         ADDITIONAL_DEFINITIONS = "--define=PIPELINE";
@@ -69,7 +76,7 @@ public class SimplePipelineMARCH extends SimpleMARCH {
             differences_1.add(new SimpleObservation(instr_1.getType(), SIMPLE_OBSERVATION_TYPE.REG_RS2));
             differences_2.add(new SimpleObservation(instr_2.getType(), SIMPLE_OBSERVATION_TYPE.REG_RS2));
         }
-        return new Pair<>(new SimpleTestResult(differences_1, true), new SimpleTestResult(differences_2, true));
+        return new Pair<>(new SimpleTestResult(differences_1, true, testCase.getIndex()), new SimpleTestResult(differences_2, true, testCase.getIndex()));
     }
 
     private Pair<Pair<Instruction, Integer>, Pair<Instruction, Integer>> findInstructionsPipeline(VcdFile ctx, TestCase testCase) {
@@ -84,7 +91,7 @@ public class SimplePipelineMARCH extends SimpleMARCH {
             generateSources(testCase, i);
             String path = "verif_out/count_" + i;
             generateSBY(50, path);
-            runScript(BASE_PATH + "/syn/verif.sh", true);
+            runScript(BASE_PATH + "/syn/verif.sh", true, 3600);
             if (Files.exists(Path.of(BASE_PATH + "/syn/" + path + "/verif/FAIL"))) {
                 System.out.println("First violation with " + i + " instructions.");
                 responsible = i;

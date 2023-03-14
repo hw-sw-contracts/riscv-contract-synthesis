@@ -10,6 +10,9 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+/**
+ * Iteratively updates the contract by adding the best observation for each test case.
+ */
 public class IterativeUpdater implements Updater {
     @Override
     public Set<Observation> update(List<TestResult> testResults) {

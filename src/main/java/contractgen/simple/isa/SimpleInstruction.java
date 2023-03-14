@@ -6,6 +6,10 @@ import contractgen.util.StringUtils;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+/**
+ * A simple instructiuon.
+ */
+@SuppressWarnings("MissingJavadoc")
 public class SimpleInstruction implements Instruction {
 
     private final SIMPLE_TYPE type;
@@ -13,6 +17,12 @@ public class SimpleInstruction implements Instruction {
     private final Integer rs1;
     private final Integer rs2;
 
+    /**
+     * @param type The type of the instruction.
+     * @param rd   The destination register.
+     * @param rs1  The first operand.
+     * @param rs2  The second operand.
+     */
     public SimpleInstruction(SIMPLE_TYPE type, Integer rd, Integer rs1, Integer rs2) {
         this.type = type;
         this.rd = rd;
@@ -28,6 +38,10 @@ public class SimpleInstruction implements Instruction {
         this.rs2 = getRs2();
     }
 
+    /**
+     * @param encoded The encoded instruction.
+     * @param base    The base. Can be 2 or 16.
+     */
     public SimpleInstruction(String encoded, int base) {
         this(base == 2 ? parseBinaryString(encoded) : base == 16 ? parseHexString(encoded) : null);
     }
@@ -58,6 +72,10 @@ public class SimpleInstruction implements Instruction {
         return StringUtils.toHexEncoding(this.toBinaryEncoding());
     }
 
+    /**
+     * @param instruction The instruction encoded in binary.
+     * @return            The parsed instruction.
+     */
     public static SimpleInstruction parseBinaryString(String instruction) {
         if (instruction.length() != 32) return null;
         System.out.println("Looking for " + instruction.substring(0,8));
@@ -74,6 +92,10 @@ public class SimpleInstruction implements Instruction {
         return new SimpleInstruction(t, rd, rs1, rs2);
     }
 
+    /**
+     * @param instruction The instruction encoded in hexadecimal.
+     * @return            The parsed instruction.
+     */
     public static SimpleInstruction parseHexString(String instruction) {
         if (instruction.length() == 10 && instruction.startsWith("0x"))
             instruction = instruction.substring(2);

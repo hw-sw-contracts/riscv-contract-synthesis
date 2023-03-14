@@ -6,10 +6,20 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
+/**
+ * Util methods related to running scripts.
+ */
 public class ScriptUtils {
 
-    public static String runScript(String path, boolean silent) {
+    /**
+     * @param path          The path of the script.
+     * @param silent        Whether the output should be printed to the console.
+     * @param maxSeconds    The timeout in seconde.
+     * @return              The console output.
+     */
+    public static String runScript(String path, boolean silent, int maxSeconds) {
         Process p = null;
         try {
             StringBuilder sb = new StringBuilder();
@@ -22,7 +32,16 @@ public class ScriptUtils {
             while (!success) {
                 try {
                     p = pb.start();
-                    p.waitFor();
+                    p.waitFor(maxSeconds, TimeUnit.SECONDS);
+                    if (p.isAlive()) {
+                        System.out.println("The process timed out.");
+                        p.destroy();
+                        p.waitFor(5, TimeUnit.SECONDS);
+                        if (p.isAlive()) {
+                            p.destroyForcibly();
+                        }
+                        return null;
+                    }
                     success = true;
                 } catch (IOException e) { // binary may be busy
 

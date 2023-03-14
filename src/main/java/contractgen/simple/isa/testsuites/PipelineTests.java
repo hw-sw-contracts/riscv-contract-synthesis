@@ -9,12 +9,21 @@ import contractgen.simple.isa.SimpleTestCase;
 import java.util.HashMap;
 import java.util.List;
 
+/**
+ * Tests for the pipelined microarchitecture.
+ */
 public class PipelineTests extends TestCases {
 
+    /**
+     * Tests for the pipelined microarchitecture.
+     */
     public PipelineTests() {
         super(generatePipelineTestCases());
     }
 
+    /**
+     * @return Tests for the pipelined microarchitecture.
+     */
     public static List<TestCase> generatePipelineTestCases() {
         List<SimpleInstruction> p1 = List.of(
                 SimpleInstruction.ADDI(1, 0, 8),
@@ -35,7 +44,7 @@ public class PipelineTests extends TestCases {
                 SimpleInstruction.ADDI(5, 0, 5),
                 SimpleInstruction.ADDI(6, 0, 6));
 
-        TestCase standard = new SimpleTestCase(new SimpleProgram(new HashMap<>(), p1), new SimpleProgram(new HashMap<>(), p2), 15);
+        TestCase standard = new SimpleTestCase(new SimpleProgram(new HashMap<>(), p1), new SimpleProgram(new HashMap<>(), p2), 15, 0);
 
 
         List<SimpleInstruction> p3 = List.of(
@@ -56,7 +65,7 @@ public class PipelineTests extends TestCases {
                 SimpleInstruction.ADDI(4, 0, 4),
                 SimpleInstruction.ADDI(5, 0, 5),
                 SimpleInstruction.ADDI(6, 0, 6));
-        TestCase content = new SimpleTestCase(new SimpleProgram(new HashMap<>(), p3), new SimpleProgram(new HashMap<>(), p4), 15);
+        TestCase content = new SimpleTestCase(new SimpleProgram(new HashMap<>(), p3), new SimpleProgram(new HashMap<>(), p4), 15, 1);
 
         List<SimpleInstruction> p5 = List.of(
                 SimpleInstruction.ADDI(1, 0, 2),
@@ -76,7 +85,7 @@ public class PipelineTests extends TestCases {
                 SimpleInstruction.ADDI(4, 0, 4),
                 SimpleInstruction.ADDI(5, 0, 5),
                 SimpleInstruction.ADDI(6, 0, 6));
-        TestCase content_2 = new SimpleTestCase(new SimpleProgram(new HashMap<>(), p5), new SimpleProgram(new HashMap<>(), p6), 15);
+        TestCase content_2 = new SimpleTestCase(new SimpleProgram(new HashMap<>(), p5), new SimpleProgram(new HashMap<>(), p6), 15, 2);
 
         return List.of(standard, content, content_2);
     }

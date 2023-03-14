@@ -66,6 +66,25 @@ module std_cache_subsystem import ariane_pkg::*; import std_cache_pkg::*; #(
     axi_req_t axi_req_data;
     axi_rsp_t axi_resp_data;
 
+    logic [63:0] addr_icache;
+    assign addr_icache = axi_req_icache.ar.addr;
+logic [63:0] addr_bypass;
+    assign addr_bypass = axi_req_bypass.ar.addr;
+logic [63:0] addr_data;
+    assign addr_data = axi_req_data.ar.addr;
+  logic [63:0] addr_out;
+  assign addr_out = axi_req_o.ar.addr;
+  /*
+  logic a_v_icache = axi_req_icache.ar_valid;
+  logic a_v_bypass = axi_req_bypass.ar_valid;
+  logic a_v_data = axi_req_data.ar_valid;
+  logic a_v_out = axi_req_out.ar_valid;
+
+  logic a_r_icache = axi_req_icache.r_ready;
+  logic a_r_bypass = axi_req_bypass.r_ready;
+  logic a_r_data = axi_req_data.r_ready;
+  logic a_r_out = axi_req_out.r_ready;
+*/
     cva6_icache_axi_wrapper #(
         .ArianeCfg    ( ArianeCfg    ),
         .AxiAddrWidth ( AxiAddrWidth ),

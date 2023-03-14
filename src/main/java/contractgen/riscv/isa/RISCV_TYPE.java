@@ -1,5 +1,9 @@
 package contractgen.riscv.isa;
 
+/**
+ * The types of RISC-V instructions.
+ */
+@SuppressWarnings("MissingJavadoc")
 public enum RISCV_TYPE {
     LUI("lui", RISCV_SUBSET.BASE, RISCV_FORMAT.UTYPE, "0110111"),
     AUIPC("aupc", RISCV_SUBSET.BASE, RISCV_FORMAT.UTYPE, "0010111"),
@@ -104,6 +108,10 @@ public enum RISCV_TYPE {
         return format;
     }
 
+    /**
+     * @param suffix The index of the core that should be used.
+     * @return       The first line of a contract for this instruction in Verilog.
+     */
     public String generateContract(String suffix) {
         if (funct3 == null)
             return "if (op_" + suffix + " == 'b" + opcode + ") begin\n";

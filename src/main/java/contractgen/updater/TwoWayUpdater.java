@@ -8,6 +8,10 @@ import contractgen.Updater;
 import java.util.*;
 import java.util.stream.Collectors;
 
+/**
+ * Iteratively computes the contract and afterwards removing observations leading to many false positives
+ * if the contract is still valid.
+ */
 public class TwoWayUpdater implements Updater {
 
 
@@ -36,6 +40,13 @@ public class TwoWayUpdater implements Updater {
         return new_contract;
     }
 
+    /**
+     * Converts a list to a map counting the occurrences of each element.
+     *
+     * @param lst The list to be converted.
+     * @param <T> The type of the elements.
+     * @return    The map.
+     */
     public static <T> Map<T, Long> toMap(List<T> lst) {
         return lst.stream().collect(Collectors.groupingBy(s -> s,
                 Collectors.counting()));

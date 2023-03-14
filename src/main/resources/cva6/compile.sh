@@ -126,6 +126,7 @@ for file in ${directories[*]}; do
     --define=CONTRACT \
     --define=VERILATOR \
     --define=RVFI_TRACE \
+    --define=RVFI_MEM \
 	./core/core/include/ariane_axi_pkg.sv \
 	./core/core/include/ariane_dm_pkg.sv \
 	./core/core/include/ariane_pkg.sv \

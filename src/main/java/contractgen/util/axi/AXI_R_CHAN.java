@@ -4,6 +4,10 @@ import contractgen.util.StringUtils;
 
 import static contractgen.util.axi.AXI_CONFIG.*;
 
+/**
+ * The R channel of the AXI interface.
+ */
+@SuppressWarnings("MissingJavadoc")
 public class AXI_R_CHAN {
 
     private final int id;

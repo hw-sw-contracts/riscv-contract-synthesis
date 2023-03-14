@@ -125,6 +125,12 @@ module ctr(
     input logic retire_i,
     input logic [31:0] instr_1_i,
     input logic [31:0] instr_2_i,
+    input logic [4:0] rd_1,
+    input logic [4:0] rd_2,
+    input logic [4:0] rs1_1,
+    input logic [4:0] rs1_2,
+    input logic [4:0] rs2_1,
+    input logic [4:0] rs2_2,
     input logic [31:0] reg_rs1_1,
     input logic [31:0] reg_rs1_2,
     input logic [31:0] reg_rs2_1,
@@ -151,8 +157,6 @@ module ctr(
         logic [31:0] imm;
         logic [31:0] reg_rs1;
         logic [31:0] reg_rs2;
-        logic [31:0] mem_rs1;
-        logic [31:0] mem_rs2;
         logic [31:0] reg_rd;
         logic [31:0] mem_addr;
         logic [31:0] mem_r_data;
@@ -170,8 +174,6 @@ module ctr(
         logic [31:0] imm;
         logic [31:0] reg_rs1;
         logic [31:0] reg_rs2;
-        logic [31:0] mem_rs1;
-        logic [31:0] mem_rs2;
         logic [31:0] reg_rd;
         logic [31:0] mem_addr;
         logic [31:0] mem_r_data;
@@ -183,9 +185,6 @@ module ctr(
     logic [2:0] funct_3_1;
     logic [6:0] funct_7_1;
     logic [2:0] format_1;
-    logic [4:0] rd_1;
-    logic [4:0] rs1_1;
-    logic [4:0] rs2_1;
     logic [31:0] imm_1;
 
     riscv_decoder decoder_1 (
@@ -194,9 +193,9 @@ module ctr(
         .op_o               (op_1),
         .funct_3_o          (funct_3_1),
         .funct_7_o          (funct_7_1),
-        .rd_o               (rd_1),
-        .rs1_o              (rs1_1),
-        .rs2_o              (rs2_1),
+        .rd_o               (),
+        .rs1_o              (),
+        .rs2_o              (),
         .imm_o              (imm_1),
     );
 
@@ -204,9 +203,6 @@ module ctr(
     logic [2:0] funct_3_2;
     logic [6:0] funct_7_2;
     logic [2:0] format_2;
-    logic [4:0] rd_2;
-    logic [4:0] rs1_2;
-    logic [4:0] rs2_2;
     logic [31:0] imm_2;
 
     riscv_decoder decoder_2 (
@@ -215,9 +211,9 @@ module ctr(
         .op_o               (op_2),
         .funct_3_o          (funct_3_2),
         .funct_7_o          (funct_7_2),
-        .rd_o               (rd_2),
-        .rs1_o              (rs1_2),
-        .rs2_o              (rs2_2),
+        .rd_o               (),
+        .rs1_o              (),
+        .rs2_o              (),
         .imm_o              (imm_2),
     );
 

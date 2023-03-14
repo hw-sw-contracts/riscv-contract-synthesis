@@ -8,10 +8,18 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+/**
+ * The result of the evaluation of a test case.
+ */
 public class RISCVTestResult extends TestResult {
 
-    public RISCVTestResult(Set<RISCVObservation> possibilities, boolean adversaryDistinguishable) {
-        super(possibilities.stream().map(o -> (Observation) o).collect(Collectors.toSet()), adversaryDistinguishable);
+    /**
+     * @param possibilities             The observations that would distinguish the two executions.
+     * @param adversaryDistinguishable  Whether the adversary was able to distinguish the two executions.
+     * @param index                     The index of the respective test case to allow to associate it with the result.
+     */
+    public RISCVTestResult(Set<RISCVObservation> possibilities, boolean adversaryDistinguishable, int index) {
+        super(possibilities.stream().map(o -> (Observation) o).collect(Collectors.toSet()), adversaryDistinguishable, index);
     }
     @Override
     public boolean equals(Object o) {

@@ -4,6 +4,10 @@ import contractgen.util.StringUtils;
 
 import static contractgen.util.axi.AXI_CONFIG.*;
 
+/**
+ * The request type of the AXI interface.
+ */
+@SuppressWarnings("MissingJavadoc")
 public class AXI_REQ {
 
     private final AXI_AW_CHAN aw;

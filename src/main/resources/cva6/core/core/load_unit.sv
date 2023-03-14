@@ -215,6 +215,8 @@ module load_unit import ariane_pkg::*; #(
                 req_port_n.tag_valid = 1'b1;
                 state_d = IDLE;
                 // we can make a new request here if we got one
+                // valid is latched, thus cannot happen
+                /*
                 if (valid_i) begin
                     // start the translation process even though we do not know if the addresses match
                     // this should ease timing
@@ -244,6 +246,7 @@ module load_unit import ariane_pkg::*; #(
                         state_d = WAIT_PAGE_OFFSET;
                     end
                 end
+                */
                 // ----------
                 // Exception
                 // ----------

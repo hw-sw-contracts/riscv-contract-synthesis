@@ -37,9 +37,5 @@ build/
 ### Mac OS ###
 .DS_Store
 
-*.json
-*.vcd
-*.csv
-
-
-docs/
+.idea/workspace.xml
+.idea/remote-targets.xml

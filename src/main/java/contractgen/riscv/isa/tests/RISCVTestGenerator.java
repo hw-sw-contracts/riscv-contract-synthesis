@@ -11,6 +11,9 @@ import contractgen.util.StringUtils;
 import java.util.*;
 import java.util.stream.Stream;
 
+/**
+ * A generator for RISC-V test cases.
+ */
 public class RISCVTestGenerator {
     private static final int NUMBER_REGISTERS = 32;
     private static final long MAX_REG = 4294967296L;
@@ -29,7 +32,14 @@ public class RISCVTestGenerator {
         this.types = Arrays.stream(RISCV_TYPE.values()).filter(t -> subsets.contains(t.getSubset())).toList();
     }
 
+    /**
+     * Generates a list of test cases by generating a random initial valuation for each register,
+     * a random instruction of a certain type and suffix to be appended to the program.
+     *
+     * @return The list of test cases.
+     */
     public List<TestCase> generate() {
+        int index = 0;
         List<TestCase> cases = new ArrayList<>();
         for (int i = 0; i < repetitions; i++) {
             for (RISCV_TYPE type: types) {
@@ -42,12 +52,12 @@ public class RISCVTestGenerator {
                         cases.add(new RISCVTestCase(
                                 new RISCVProgram(registers, Stream.concat(prefix.left().stream(), suffix.stream()).toList()),
                                 new RISCVProgram(registers, Stream.concat(prefix.right().stream(), suffix.stream()).toList()),
-                                Integer.max(prefix.left().size() + suffix.size(), prefix.right().size() + suffix.size()), new RISCVTestResult(Set.of(new RISCVObservation(type, observation)), true)));
+                                Integer.max(prefix.left().size() + suffix.size(), prefix.right().size() + suffix.size()), new RISCVTestResult(Set.of(new RISCVObservation(type, observation)), true, index), index++));
                     }
                 }
             }
             if (i % 3 == 0)
-                cases.add(new RISCVTestCase(new RISCVProgram(randomRegisters(), randomSequence(r.nextInt(5, 50))), new RISCVProgram(randomRegisters(), randomSequence(r.nextInt(5, 50))), 50));
+                cases.add(new RISCVTestCase(new RISCVProgram(randomRegisters(), randomSequence(r.nextInt(5, 50))), new RISCVProgram(randomRegisters(), randomSequence(r.nextInt(5, 50))), 50, index++));
         }
         return cases;
 
@@ -67,9 +77,17 @@ public class RISCVTestGenerator {
         return result;
     }
 
+    /**
+     * Alters a given instruction to introduce a specific possible leakage. In most cases this requires executing
+     * different instructions before the relevant instruction to alter the architectural state accordingly.
+     *
+     * @param type          The type of observation that should be triggered.
+     * @param instruction   The instruction to be altered.
+     * @return              A pair of sequences of instructions.
+     */
     private Pair<List<RISCVInstruction>, List<RISCVInstruction>> alterObservation(RISCV_OBSERVATION_TYPE type, RISCVInstruction instruction) {
         return switch (type) {
-            case TYPE, OPCODE, FUNCT5, FUNCT3, MEM_ADDR, MEM_W_DATA -> null;
+            case TYPE, OPCODE, FUNCT5, FUNCT3 -> null;
             case RD -> {
                 if (instruction.rd() == null) yield null;
                 RISCVInstruction ins1 = instruction.cloneAlteringRD(r.nextInt(1, NUMBER_REGISTERS));
@@ -106,7 +124,7 @@ public class RISCVTestGenerator {
                 RISCVInstruction ins2 = RISCVInstruction.ADDI(instruction.rs2(), 0, r.nextLong(MAX_IMM_I));
                 yield new Pair<>(List.of(ins1, instruction), List.of(ins2, instruction));
             }
-            case MEM_RS1 -> {
+            case MEM_ADDR -> {
                 if (instruction.rs1() == null) yield null;
                 long address = r.nextLong(MAX_IMM_I);
                 RISCVInstruction val1 = RISCVInstruction.ADDI(31, 0, r.nextLong(MAX_IMM_I));
@@ -116,7 +134,7 @@ public class RISCVTestGenerator {
                 RISCVInstruction ins2 = RISCVInstruction.SW(instruction.rs1(), 30, 0);
                 yield new Pair<>(List.of(val1, val2, instr_addr, ins1, instruction), List.of(val1, val2, instr_addr, ins2, instruction));
             }
-            case MEM_RS2 -> {
+            case MEM_W_DATA -> {
                 if (instruction.rs2() == null) yield null;
                 long address = r.nextLong(MAX_IMM_I);
                 RISCVInstruction val1 = RISCVInstruction.ADDI(31, 0, r.nextLong(MAX_IMM_I));

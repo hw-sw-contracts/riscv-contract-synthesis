@@ -11,10 +11,17 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Set;
 
+/**
+ * The RISC-V instruction set architecture.
+ */
 public class RISCV extends ISA {
 
     private RISCVContract contract;
 
+    /**
+     * @param updater   The updater to be used to compute the contract.
+     * @param testCases The test cases to be used for generation or evaluation.
+     */
     public RISCV(Updater updater, TestCases testCases) {
         super(testCases);
         contract = new RISCVContract(updater);
@@ -28,5 +35,6 @@ public class RISCV extends ISA {
     @Override
     public void loadContract(Path path) throws IOException {
         this.contract = RISCVContract.fromJSON(Files.readString(path));
+        this.contract.update(true);
     }
 }

@@ -71,6 +71,7 @@ module axi_adapter #(
   logic [1:0] size_d, size_q;
 
   logic req_q;
+  /*
   always_ff @(posedge clk_i or negedge rst_ni) begin
     if (~rst_ni) begin
       // start in flushing state and initialize the memory
@@ -79,13 +80,14 @@ module axi_adapter #(
       req_q       <= req_i;
     end
   end
-
-  //always_comb begin : axi_fsm
-    always @(
-        addr_i, size_i, id_i, amo_i, type_i, wdata_i[0], be_i[0], req_q, we_i,
-        cache_line_q, state_q, cnt_q, addr_offset_q, id_q, amo_q, size_q,
-        axi_resp_i.r.id, axi_resp_i.r.data, axi_resp_i.aw_ready, axi_resp_i.w_ready, axi_resp_i.ar_ready,  axi_resp_i.b.id, axi_resp_i.b_valid, axi_resp_i.r_valid, index, axi_resp_i.r.last
-      ) begin : axi_fsm
+*/
+  assign req_q = req_i;
+  always_comb begin : axi_fsm
+    //always @(
+    //    addr_i, size_i, id_i, amo_i, type_i, wdata_i[0], be_i[0], req_q, we_i,
+    //    cache_line_q, state_q, cnt_q, addr_offset_q, id_q, amo_q, size_q,
+    //    axi_resp_i.r.id, axi_resp_i.r.data, axi_resp_i.aw_ready, axi_resp_i.w_ready, axi_resp_i.ar_ready,  axi_resp_i.b.id, axi_resp_i.b_valid, axi_resp_i.r_valid, index, axi_resp_i.r.last
+    //  ) begin : axi_fsm
     // Default assignments
     axi_req_o.aw_valid  = 1'b0;
     // Cast to AXI address width

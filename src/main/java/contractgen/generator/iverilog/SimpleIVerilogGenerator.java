@@ -3,10 +3,16 @@ package contractgen.generator.iverilog;
 import contractgen.*;
 import contractgen.util.Pair;
 
+/**
+ * A Generator that uses Icarus verilog to simulate test cases.
+ */
 public class SimpleIVerilogGenerator extends Generator {
 
-    public SimpleIVerilogGenerator(contractgen.MARCH march) {
-        super(march);
+    /**
+     * @param MARCH The microarchitecture to be used.
+     */
+    public SimpleIVerilogGenerator(contractgen.MARCH MARCH) {
+        super(MARCH);
     }
 
     @Override
@@ -21,12 +27,12 @@ public class SimpleIVerilogGenerator extends Generator {
         for (TestCase testCase: MARCH.getISA().getTestCases().getTestCaseList()) {
             MARCH.writeTestCase(testCase);
             milis = System.currentTimeMillis();
-            boolean pass = MARCH.simulate();
+            SIMULATION_RESULT pass = MARCH.simulate();
             i++;
             long time = System.currentTimeMillis() - milis;
             avg = avg + time;
             System.out.printf("Current progress: %d of %d. Stats: last %d ms, avg %d ms\r", i, MARCH.getISA().getTestCases().getTestCaseList().size(), time, avg / i);
-            if (!pass) {
+            if (pass == SIMULATION_RESULT.FAIL) {
                 System.out.println(testCase);
                 Pair<TestResult, TestResult> ctx = MARCH.extractCTX(testCase);
                 MARCH.getISA().getContract().add(ctx.left());

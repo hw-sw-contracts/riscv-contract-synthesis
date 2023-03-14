@@ -125,12 +125,24 @@ module ctr(
     input logic retire_i,
     input logic [31:0] instr_1_i,
     input logic [31:0] instr_2_i,
-    input logic [31:0][31:0] regfile_1_i,
-    input logic [31:0][31:0] regfile_2_i,
-    input logic [31:0][31:0] mem_addr_1_i,
-    input logic [31:0][31:0] mem_addr_2_i,
-    input logic [7:0][31:0] mem_data_1_i,
-    input logic [7:0][31:0] mem_data_2_i,
+    input logic [4:0] rd_1,
+    input logic [4:0] rd_2,
+    input logic [4:0] rs1_1,
+    input logic [4:0] rs1_2,
+    input logic [4:0] rs2_1,
+    input logic [4:0] rs2_2,
+    input logic [31:0] reg_rs1_1,
+    input logic [31:0] reg_rs1_2,
+    input logic [31:0] reg_rs2_1,
+    input logic [31:0] reg_rs2_2,
+    input logic [31:0] reg_rd_1,
+    input logic [31:0] reg_rd_2,
+    input logic [31:0] mem_addr_1,
+    input logic [31:0] mem_addr_2,
+    input logic [31:0] mem_r_data_1,
+    input logic [31:0] mem_r_data_2,
+    input logic [31:0] mem_w_data_1,
+    input logic [31:0] mem_w_data_2,
     output logic ctr_equiv_o,
 );
 
@@ -145,8 +157,6 @@ module ctr(
         logic [31:0] imm;
         logic [31:0] reg_rs1;
         logic [31:0] reg_rs2;
-        logic [31:0] mem_rs1;
-        logic [31:0] mem_rs2;
         logic [31:0] reg_rd;
         logic [31:0] mem_addr;
         logic [31:0] mem_r_data;
@@ -164,8 +174,6 @@ module ctr(
         logic [31:0] imm;
         logic [31:0] reg_rs1;
         logic [31:0] reg_rs2;
-        logic [31:0] mem_rs1;
-        logic [31:0] mem_rs2;
         logic [31:0] reg_rd;
         logic [31:0] mem_addr;
         logic [31:0] mem_r_data;
@@ -177,16 +185,7 @@ module ctr(
     logic [2:0] funct_3_1;
     logic [6:0] funct_7_1;
     logic [2:0] format_1;
-    logic [4:0] rd_1;
-    logic [4:0] rs1_1;
-    logic [4:0] rs2_1;
-    logic [31:0] imm_1; 
-    logic [31:0] reg_rs1_1;
-    assign reg_rs1_1 = regfile_1_i[rs1_1];
-    logic [31:0] reg_rs2_1;
-    assign reg_rs2_1 = regfile_1_i[rs2_1];
-    logic [31:0] mem_rs1_1;
-    logic [31:0] mem_rs2_1;
+    logic [31:0] imm_1;
 
     riscv_decoder decoder_1 (
         .instr_i            (instr_1_i),
@@ -194,9 +193,9 @@ module ctr(
         .op_o               (op_1),
         .funct_3_o          (funct_3_1),
         .funct_7_o          (funct_7_1),
-        .rd_o               (rd_1),
-        .rs1_o              (rs1_1),
-        .rs2_o              (rs2_1),
+        .rd_o               (),
+        .rs1_o              (),
+        .rs2_o              (),
         .imm_o              (imm_1),
     );
 
@@ -204,16 +203,7 @@ module ctr(
     logic [2:0] funct_3_2;
     logic [6:0] funct_7_2;
     logic [2:0] format_2;
-    logic [4:0] rd_2;
-    logic [4:0] rs1_2;
-    logic [4:0] rs2_2;
-    logic [31:0] imm_2; 
-    logic [31:0] reg_rs1_2;
-    assign reg_rs1_2 = regfile_2_i[rs1_2];
-    logic [31:0] reg_rs2_2;
-    assign reg_rs2_2 = regfile_2_i[rs2_2];
-    logic [31:0] mem_rs1_2;
-    logic [31:0] mem_rs2_2;
+    logic [31:0] imm_2;
 
     riscv_decoder decoder_2 (
         .instr_i            (instr_2_i),
@@ -221,9 +211,9 @@ module ctr(
         .op_o               (op_2),
         .funct_3_o          (funct_3_2),
         .funct_7_o          (funct_7_2),
-        .rd_o               (rd_2),
-        .rs1_o              (rs1_2),
-        .rs2_o              (rs2_2),
+        .rd_o               (),
+        .rs1_o              (),
+        .rs2_o              (),
         .imm_o              (imm_2),
     );
 
@@ -234,68 +224,6 @@ module ctr(
     integer i;
     logic [31:0] temp;
     always @(negedge clk_i) begin
-        mem_rs1_1 = reg_rs1_1;
-        for (i = 0; i < 32; i = i + 1) begin
-            if ((mem_addr_1_i[i] + 0) == reg_rs1_1) begin
-                mem_rs1_1[(0*8)+7:(0*8)] = mem_data_1_i[i];
-            end
-            if ((mem_addr_1_i[i] + 1) == reg_rs1_1) begin
-                mem_rs1_1[(1*8)+7:(1*8)] = mem_data_1_i[i];
-            end
-            if ((mem_addr_1_i[i] + 2) == reg_rs1_1) begin
-                mem_rs1_1[(2*8)+7:(2*8)] = mem_data_1_i[i];
-            end
-            if ((mem_addr_1_i[i] + 3) == reg_rs1_1) begin
-                mem_rs1_1[(3*8)+7:(3*8)] = mem_data_1_i[i];
-            end
-        end
-        mem_rs2_1 = reg_rs2_1;
-        for (i = 0; i < 32; i = i + 1) begin
-            if ((mem_addr_1_i[i] + 0) == reg_rs2_1) begin
-                mem_rs2_1[(0*8)+7:(0*8)] = mem_data_1_i[i];
-            end
-            if ((mem_addr_1_i[i] + 1) == reg_rs2_1) begin
-                mem_rs2_1[(1*8)+7:(1*8)] = mem_data_1_i[i];
-            end
-            if ((mem_addr_1_i[i] + 2) == reg_rs2_1) begin
-                mem_rs2_1[(2*8)+7:(2*8)] = mem_data_1_i[i];
-            end
-            if ((mem_addr_1_i[i] + 3) == reg_rs2_1) begin
-                mem_rs2_1[(3*8)+7:(3*8)] = mem_data_1_i[i];
-            end
-        end
-        mem_rs1_2 = reg_rs1_2;
-        for (i = 0; i < 32; i = i + 1) begin
-            if ((mem_addr_2_i[i] + 0) == reg_rs1_2) begin
-                mem_rs1_2[(0*8)+7:(0*8)] = mem_data_2_i[i];
-            end
-            if ((mem_addr_2_i[i] + 1) == reg_rs1_2) begin
-                mem_rs1_2[(1*8)+7:(1*8)] = mem_data_2_i[i];
-            end
-            if ((mem_addr_2_i[i] + 2) == reg_rs1_2) begin
-                mem_rs1_2[(2*8)+7:(2*8)] = mem_data_2_i[i];
-            end
-            if ((mem_addr_2_i[i] + 3) == reg_rs1_2) begin
-                mem_rs1_2[(3*8)+7:(3*8)] = mem_data_2_i[i];
-            end
-        end
-        mem_rs2_2 = reg_rs2_2;
-        for (i = 0; i < 32; i = i + 1) begin
-            if ((mem_addr_2_i[i] + 0) == reg_rs2_2) begin
-                mem_rs2_2[(0*8)+7:(0*8)] = mem_data_2_i[i];
-            end
-            if ((mem_addr_2_i[i] + 1) == reg_rs2_2) begin
-                mem_rs2_2[(1*8)+7:(1*8)] = mem_data_2_i[i];
-            end
-            if ((mem_addr_2_i[i] + 2) == reg_rs2_2) begin
-                mem_rs2_2[(2*8)+7:(2*8)] = mem_data_2_i[i];
-            end
-            if ((mem_addr_2_i[i] + 3) == reg_rs2_2) begin
-                mem_rs2_2[(3*8)+7:(3*8)] = mem_data_2_i[i];
-            end
-        end
-    //end
-    //always @(posedge retire_i) begin
         if (retire_i == 1) begin
             
 			/* CONTRACT */

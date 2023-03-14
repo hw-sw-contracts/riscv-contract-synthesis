@@ -11,6 +11,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Random;
 
+/**
+ * Random tests for the simple ISA.
+ */
 public class RandomTests extends TestCases {
 
     protected RandomTests(int count, long seed) {
@@ -55,7 +58,7 @@ public class RandomTests extends TestCases {
                 r1.put(j, r.nextInt(256));
                 r2.put(j, r.nextInt(256));
             }
-            testcases.add(new SimpleTestCase(new SimpleProgram(r1, p1), new SimpleProgram(r2, p2), instrcount + 8));
+            testcases.add(new SimpleTestCase(new SimpleProgram(r1, p1), new SimpleProgram(r2, p2), instrcount + 8, i));
         }
         return testcases;
     }

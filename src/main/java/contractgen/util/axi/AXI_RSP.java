@@ -4,6 +4,10 @@ import contractgen.util.StringUtils;
 
 import static contractgen.util.axi.AXI_CONFIG.*;
 
+/**
+ * The response time of the AXI interface.
+ */
+@SuppressWarnings("MissingJavadoc")
 public class AXI_RSP {
 
     private final int aw_ready;

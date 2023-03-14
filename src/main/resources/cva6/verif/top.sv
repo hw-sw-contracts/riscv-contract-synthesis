@@ -134,12 +134,18 @@ module top (
     logic [63:0] data_r_2;
 
 
-    logic retire_1 = 1;
-    logic retire_2 = 1;
+    logic retire_1 = 0;
+    logic retire_2 = 0;
     logic [31:0] retire_instr_1;
     logic [31:0] retire_instr_2;
     logic fetch_1;
     logic fetch_2;
+    logic [4:0] rd_1;
+    logic [4:0] rd_2;
+    logic [4:0] rs1_1;
+    logic [4:0] rs1_2;
+    logic [4:0] rs2_1;
+    logic [4:0] rs2_2;
     logic [31:0] reg_rs1_1;
     logic [31:0] reg_rs1_2;
     logic [31:0] reg_rs2_1;
@@ -154,6 +160,12 @@ module top (
     logic [31:0] mem_w_data_2;
 
 
+    logic [31:0] pc_rdata_1_1;
+    logic [31:0] pc_rdata_1_2;
+    logic [31:0] pc_rdata_2_1;
+    logic [31:0] pc_rdata_2_2;
+
+
     logic retire;
     logic atk_equiv;
     logic ctr_equiv;
@@ -162,6 +174,9 @@ module top (
     logic enable_2;
     logic finished;
 
+    logic sel_1;
+    logic sel_2;
+
 `ifdef RVFI_TRACE
     rvfi_instr_t [1:0] rvfi_1;
 
@@ -169,6 +184,12 @@ module top (
     logic valid_1_2;
     logic [31:0] insn_1_1;
     logic [31:0] insn_1_2;
+    logic [4:0] rd_1_1;
+    logic [4:0] rd_1_2;
+    logic [4:0] rs1_1_1;
+    logic [4:0] rs1_1_2;
+    logic [4:0] rs2_1_1;
+    logic [4:0] rs2_1_2;
     logic [31:0] rs1_rdata_1_1;
     logic [31:0] rs1_rdata_1_2;
     logic [31:0] rs2_rdata_1_1;
@@ -181,39 +202,81 @@ module top (
     logic [31:0] mem_rdata_1_2;
     logic [31:0] mem_wdata_1_1;
     logic [31:0] mem_wdata_1_2;
+    logic [3:0]  mem_rmask_1_1;
+    logic [3:0]  mem_rmask_1_2;
+    logic [3:0]  mem_wmask_1_1;
+    logic [3:0]  mem_wmask_1_2;
 
     rvfi_unwrap rvfi_unwrap_1_1 (
         .rvfi_instr_i (rvfi_1[0]),
         .valid_o(valid_1_1),
         .insn_o(insn_1_1),
+        .rs1_addr_o(rs1_1_1),
+        .rs2_addr_o(rs2_1_1),
         .rs1_rdata_o(rs1_rdata_1_1),
         .rs2_rdata_o(rs2_rdata_1_1),
+        .rd_addr_o(rd_1_1),
         .rd_wdata_o(rd_wdata_1_1),
         .mem_addr_o(mem_addr_1_1),
         .mem_rdata_o(mem_rdata_1_1),
         .mem_wdata_o(mem_wdata_1_1),
+        .pc_rdata_o(pc_rdata_1_1),
+        .mem_rmask_o(mem_rmask_1_1),
+        .mem_wmask_o(mem_wmask_1_1),
     );
 
     rvfi_unwrap rvfi_unwrap_1_2 (
         .rvfi_instr_i (rvfi_1[1]),
         .valid_o(valid_1_2),
         .insn_o(insn_1_2),
+        .rs1_addr_o(rs1_1_2),
+        .rs2_addr_o(rs2_1_2),
         .rs1_rdata_o(rs1_rdata_1_2),
         .rs2_rdata_o(rs2_rdata_1_2),
+        .rd_addr_o(rd_1_2),
         .rd_wdata_o(rd_wdata_1_2),
         .mem_addr_o(mem_addr_1_2),
         .mem_rdata_o(mem_rdata_1_2),
         .mem_wdata_o(mem_wdata_1_2),
+        .pc_rdata_o(pc_rdata_1_2),
+        .mem_rmask_o(mem_rmask_1_2),
+        .mem_wmask_o(mem_wmask_1_2),
     );
 
-    always @(clock_1) retire_1 <= valid_1_1 || valid_1_2;
-    always @(clock_1) retire_instr_1 <= valid_1_1 == 1'b1 ? insn_1_1 : insn_1_2;
-    always @(clock_1) reg_rs1_1 <= valid_1_1 == 1'b1 ? rs1_rdata_1_1 : rs1_rdata_1_2;
-    always @(clock_1) reg_rs2_1 <= valid_1_1 == 1'b1 ? rs2_rdata_1_1 : rs2_rdata_1_2;
-    always @(clock_1) reg_rd_1 <= valid_1_1 == 1'b1 ? rd_wdata_1_1 : rd_wdata_1_2;
-    always @(clock_1) mem_addr_1 <= valid_1_1 == 1'b1 ? mem_addr_1_1 : mem_addr_1_2;
-    always @(clock_1) mem_r_data_1 <= valid_1_1 == 1'b1 ? mem_rdata_1_1 : mem_rdata_1_2;
-    always @(clock_1) mem_w_data_1 <= valid_1_1 == 1'b1 ? mem_wdata_1_1 : mem_wdata_1_2;
+    assign retire_instr_1 = sel_1 ? insn_1_2 : insn_1_1;
+    assign rs1_1 = sel_1 ? rs1_1_2 : rs1_1_1;
+    assign rs2_1 = sel_1 ? rs2_1_2 : rs2_1_1;
+    assign rd_1 = sel_1 ? rd_1_2 : rd_1_1;
+    assign reg_rs1_1 = sel_1 ? rs1_rdata_1_2 : rs1_rdata_1_1;
+    assign reg_rs2_1 = sel_1 ? rs2_rdata_1_2 : rs2_rdata_1_1;
+    assign reg_rd_1 = sel_1 ? rd_wdata_1_2 : rd_wdata_1_1;
+    assign mem_addr_1 = sel_1 ? mem_addr_1_2 : mem_addr_1_1;
+    assign mem_r_data_1 =
+        sel_1 ?
+            {   mem_rmask_1_2[3] ? mem_rdata_1_2[31:24] : 8'b0,
+                mem_rmask_1_2[2] ? mem_rdata_1_2[23:16] : 8'b0,
+                mem_rmask_1_2[1] ? mem_rdata_1_2[15:8] : 8'b0,
+                mem_rmask_1_2[0] ? mem_rdata_1_2[7:0] : 8'b0
+            }
+        :
+            {   mem_rmask_1_1[3] ? mem_rdata_1_1[31:24] : 8'b0,
+                mem_rmask_1_1[2] ? mem_rdata_1_1[23:16] : 8'b0,
+                mem_rmask_1_1[1] ? mem_rdata_1_1[15:8] : 8'b0,
+                mem_rmask_1_1[0] ? mem_rdata_1_1[7:0] : 8'b0
+            };
+    assign mem_w_data_1 =
+        sel_1 ?
+            {   mem_wmask_1_2[3] ? mem_wdata_1_2[31:24] : 8'b0,
+                mem_wmask_1_2[2] ? mem_wdata_1_2[23:16] : 8'b0,
+                mem_wmask_1_2[1] ? mem_wdata_1_2[15:8] : 8'b0,
+                mem_wmask_1_2[0] ? mem_wdata_1_2[7:0] : 8'b0
+            }
+        :
+            {   mem_wmask_1_1[3] ? mem_wdata_1_1[31:24] : 8'b0,
+                mem_wmask_1_1[2] ? mem_wdata_1_1[23:16] : 8'b0,
+                mem_wmask_1_1[1] ? mem_wdata_1_1[15:8] : 8'b0,
+                mem_wmask_1_1[0] ? mem_wdata_1_1[7:0] : 8'b0
+            };
 
 
     rvfi_instr_t [1:0] rvfi_2;
@@ -222,6 +285,12 @@ module top (
     logic valid_2_2;
     logic [31:0] insn_2_1;
     logic [31:0] insn_2_2;
+    logic [4:0] rd_2_1;
+    logic [4:0] rd_2_2;
+    logic [4:0] rs1_2_1;
+    logic [4:0] rs1_2_2;
+    logic [4:0] rs2_2_1;
+    logic [4:0] rs2_2_2;
     logic [31:0] rs1_rdata_2_1;
     logic [31:0] rs1_rdata_2_2;
     logic [31:0] rs2_rdata_2_1;
@@ -234,39 +303,81 @@ module top (
     logic [31:0] mem_rdata_2_2;
     logic [31:0] mem_wdata_2_1;
     logic [31:0] mem_wdata_2_2;
+    logic [3:0]  mem_rmask_2_1;
+    logic [3:0]  mem_rmask_2_2;
+    logic [3:0]  mem_wmask_2_1;
+    logic [3:0]  mem_wmask_2_2;
 
     rvfi_unwrap rvfi_unwrap_2_1 (
         .rvfi_instr_i (rvfi_2[0]),
         .valid_o(valid_2_1),
         .insn_o(insn_2_1),
+        .rs1_addr_o(rs1_2_1),
+        .rs2_addr_o(rs2_2_1),
         .rs1_rdata_o(rs1_rdata_2_1),
         .rs2_rdata_o(rs2_rdata_2_1),
+        .rd_addr_o(rd_2_1),
         .rd_wdata_o(rd_wdata_2_1),
         .mem_addr_o(mem_addr_2_1),
         .mem_rdata_o(mem_rdata_2_1),
         .mem_wdata_o(mem_wdata_2_1),
+        .pc_rdata_o(pc_rdata_2_1),
+        .mem_rmask_o(mem_rmask_2_1),
+        .mem_wmask_o(mem_wmask_2_1),
     );
 
     rvfi_unwrap rvfi_unwrap_2_2 (
         .rvfi_instr_i (rvfi_2[1]),
         .valid_o(valid_2_2),
         .insn_o(insn_2_2),
+        .rs1_addr_o(rs1_2_2),
+        .rs2_addr_o(rs2_2_2),
         .rs1_rdata_o(rs1_rdata_2_2),
         .rs2_rdata_o(rs2_rdata_2_2),
+        .rd_addr_o(rd_2_2),
         .rd_wdata_o(rd_wdata_2_2),
         .mem_addr_o(mem_addr_2_2),
         .mem_rdata_o(mem_rdata_2_2),
         .mem_wdata_o(mem_wdata_2_2),
+        .pc_rdata_o(pc_rdata_2_2),
+        .mem_rmask_o(mem_rmask_2_2),
+        .mem_wmask_o(mem_wmask_2_2),
     );
 
-    always @(clock_1) retire_2 <= valid_2_1 || valid_2_2;
-    always @(clock_1) retire_instr_2 <= valid_2_1 == 1'b1 ? insn_2_1 : insn_2_2;
-    always @(clock_1) reg_rs1_2 <= valid_2_1 == 1'b1 ? rs1_rdata_2_1 : rs1_rdata_2_2;
-    always @(clock_1) reg_rs2_2 <= valid_2_1 == 1'b1 ? rs2_rdata_2_1 : rs2_rdata_2_2;
-    always @(clock_1) reg_rd_2 <= valid_2_1 == 1'b1 ? rd_wdata_2_1 : rd_wdata_2_2;
-    always @(clock_1) mem_addr_2 <= valid_2_1 == 1'b1 ? mem_addr_2_1 : mem_addr_2_2;
-    always @(clock_1) mem_r_data_2 <= valid_2_1 == 1'b1 ? mem_rdata_2_1 : mem_rdata_2_2;
-    always @(clock_1) mem_w_data_2 <= valid_2_1 == 1'b1 ? mem_wdata_2_1 : mem_wdata_2_2;
+    assign retire_instr_2 = sel_2 ? insn_2_2 : insn_2_1;
+    assign rs1_2 = sel_2 ? rs1_2_2 : rs1_2_1;
+    assign rs2_2 = sel_2 ? rs2_2_2 : rs2_2_1;
+    assign rd_2 = sel_2 ? rd_2_2 : rd_2_1;
+    assign reg_rs1_2 = sel_2 ? rs1_rdata_2_2 : rs1_rdata_2_1;
+    assign reg_rs2_2 = sel_2 ? rs2_rdata_2_2 : rs2_rdata_2_1;
+    assign reg_rd_2 = sel_2 ? rd_wdata_2_2 : rd_wdata_2_1;
+    assign mem_addr_2 = sel_2 ? mem_addr_2_2 : mem_addr_2_1;
+    assign mem_r_data_2 =
+        sel_2 ?
+            {   mem_rmask_2_2[3] ? mem_rdata_2_2[31:24] : 8'b0,
+                mem_rmask_2_2[2] ? mem_rdata_2_2[23:16] : 8'b0,
+                mem_rmask_2_2[1] ? mem_rdata_2_2[15:8] : 8'b0,
+                mem_rmask_2_2[0] ? mem_rdata_2_2[7:0] : 8'b0
+            }
+        :
+            {   mem_rmask_2_1[3] ? mem_rdata_2_1[31:24] : 8'b0,
+                mem_rmask_2_1[2] ? mem_rdata_2_1[23:16] : 8'b0,
+                mem_rmask_2_1[1] ? mem_rdata_2_1[15:8] : 8'b0,
+                mem_rmask_2_1[0] ? mem_rdata_2_1[7:0] : 8'b0
+            };
+    assign mem_w_data_2 =
+        sel_2 ?
+            {   mem_wmask_2_2[3] ? mem_wdata_2_2[31:24] : 8'b0,
+                mem_wmask_2_2[2] ? mem_wdata_2_2[23:16] : 8'b0,
+                mem_wmask_2_2[1] ? mem_wdata_2_2[15:8] : 8'b0,
+                mem_wmask_2_2[0] ? mem_wdata_2_2[7:0] : 8'b0
+            }
+        :
+            {   mem_wmask_2_1[3] ? mem_wdata_2_1[31:24] : 8'b0,
+                mem_wmask_2_1[2] ? mem_wdata_2_1[23:16] : 8'b0,
+                mem_wmask_2_1[1] ? mem_wdata_2_1[15:8] : 8'b0,
+                mem_wmask_2_1[0] ? mem_wdata_2_1[7:0] : 8'b0
+            };
 `endif
 
     mem #(
@@ -412,6 +523,12 @@ module top (
         .retire_i               (retire),
         .instr_1_i              (retire_instr_1),
         .instr_2_i              (retire_instr_2),
+        .rd_1                   (rd_1),
+        .rd_2                   (rd_2),
+        .rs1_1                  (rs1_1),
+        .rs1_2                  (rs1_2),
+        .rs2_1                  (rs2_1),
+        .rs2_2                  (rs2_2),
         .reg_rs1_1              (reg_rs1_1),
         .reg_rs1_2              (reg_rs1_2),
         .reg_rs2_1              (reg_rs2_1),
@@ -429,10 +546,18 @@ module top (
 
     clk_sync clk_sync (
         .clk_i                  (clock),
-        .retire_1_i             (retire_1),
-        .retire_2_i             (retire_2),
+        .valid_1_1_i            (valid_1_1),
+        .valid_1_2_i            (valid_1_2),
+        .valid_2_1_i            (valid_2_1),
+        .valid_2_2_i            (valid_2_2),
+        .pc_rdata_1_1_i         (pc_rdata_1_1),
+        .pc_rdata_1_2_i         (pc_rdata_1_2),
+        .pc_rdata_2_1_i         (pc_rdata_2_1),
+        .pc_rdata_2_2_i         (pc_rdata_1_2),
         .clk_1_o                (clock_1),
         .clk_2_o                (clock_2),
+        .sel_1_o                (sel_1),
+        .sel_2_o                (sel_2),
         .retire_o               (retire),
     );
 

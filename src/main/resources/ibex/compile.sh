@@ -24,6 +24,7 @@ for file in ${directories[*]}; do
   sv2v -v \
     --define=SYNTHESIS \
     --define=CONTRACT \
+    --define=RISCV_FORMAL \
     ./core/rtl/*_pkg.sv \
     -I./core/vendor/lowrisc_ip/ip/prim/rtl \
     "$file" \

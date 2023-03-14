@@ -8,10 +8,18 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+/**
+ * A test result from evaluating a test case in the simple ISA.
+ */
 public class SimpleTestResult extends TestResult {
 
-    public SimpleTestResult(Set<SimpleObservation> possibilities, boolean adversaryDistinguishable) {
-        super(possibilities.stream().map(o -> (Observation) o).collect(Collectors.toSet()), adversaryDistinguishable);
+    /**
+     * @param possibilities             The observations that would distinguish the executions in this test case.
+     * @param adversaryDistinguishable  Whether the adversary was able to distinguish the two executions.
+     * @param index                     The index of the test case for further reference.
+     */
+    public SimpleTestResult(Set<SimpleObservation> possibilities, boolean adversaryDistinguishable, int index) {
+        super(possibilities.stream().map(o -> (Observation) o).collect(Collectors.toSet()), adversaryDistinguishable, index);
     }
 
     @Override

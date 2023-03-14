@@ -1,3 +1,7 @@
+`ifdef RISCV_FORMAL
+    `define RVFI
+`endif
+
 module top (
 
 );
@@ -79,12 +83,10 @@ module top (
     logic [31:0] retire_instr_2;
     logic fetch_1;
     logic fetch_2;
-    logic [31:0][31:0] regfile_1;
-    logic [31:0][31:0] regfile_2;
-    logic [31:0][31:0] mem_addr_1;
-    logic [31:0][31:0] mem_addr_2;
-    logic [7:0][31:0] mem_data_1;
-    logic [7:0][31:0] mem_data_2;
+    logic [31:0] mem_r_data_1;
+    logic [31:0] mem_w_data_1;
+    logic [31:0] mem_r_data_2;
+    logic [31:0] mem_w_data_2;
 
     logic retire;
     logic atk_equiv;
@@ -93,6 +95,35 @@ module top (
     logic enable_1;
     logic enable_2;
     logic finished;
+
+    `ifdef RVFI
+        logic valid_1;
+        logic valid_2;
+        logic [31:0] insn_1;
+        logic [31:0] insn_2;
+        logic [4:0] rd_1;
+        logic [4:0] rd_2;
+        logic [4:0] rs1_1;
+        logic [4:0] rs1_2;
+        logic [4:0] rs2_1;
+        logic [4:0] rs2_2;
+        logic [31:0] rs1_rdata_1;
+        logic [31:0] rs1_rdata_2;
+        logic [31:0] rs2_rdata_1;
+        logic [31:0] rs2_rdata_2;
+        logic [31:0] rd_wdata_1;
+        logic [31:0] rd_wdata_2;
+        logic [31:0] mem_addr_1;
+        logic [31:0] mem_addr_2;
+        logic [31:0] mem_rdata_1;
+        logic [31:0] mem_rdata_2;
+        logic [31:0] mem_wdata_1;
+        logic [31:0] mem_wdata_2;
+        logic [3:0] mem_rmask_1;
+        logic [3:0] mem_rmask_2;
+        logic [3:0] mem_wmask_1;
+        logic [3:0] mem_wmask_2;
+    `endif
 
     instr_mem #(
         .ID                     (1),
@@ -127,8 +158,6 @@ module top (
         .data_rvalid_o          (data_rvalid_1),
         .data_rdata_o           (data_rdata_1),
         .data_err_o             (data_err_1),
-        .mem_addr_o             (mem_addr_1),
-        .mem_data_o             (mem_data_1),
     );
 
     data_mem data_mem_2 (
@@ -142,8 +171,6 @@ module top (
         .data_rvalid_o          (data_rvalid_2),
         .data_rdata_o           (data_rdata_2),
         .data_err_o             (data_err_2),
-        .mem_addr_o             (mem_addr_2),
-        .mem_data_o             (mem_data_2),
     );
 
     ibex_core #(
@@ -192,9 +219,31 @@ module top (
         .core_sleep_o           (core_sleep_1),
 
         .fetch_o                (fetch_1),
-        .retire_o               (retire_1),
-        .retire_instr_o         (retire_instr_1),
-        .regfile_o              (regfile_1),
+
+    `ifdef RVFI
+        .rvfi_valid(retire_1),
+        .rvfi_order(),
+        .rvfi_insn(retire_instr_1),
+        .rvfi_trap(),
+        .rvfi_halt(),
+        .rvfi_mode(),
+        .rvfi_ixl(),
+        .rvfi_rs1_addr(rs1_1),
+        .rvfi_rs2_addr(rs2_1),
+        .rvfi_rs3_addr(),
+        .rvfi_rs1_rdata(rs1_rdata_1),
+        .rvfi_rs2_rdata(rs2_rdata_1),
+        .rvfi_rs3_rdata(),
+        .rvfi_rd_addr(rd_1),
+        .rvfi_rd_wdata(rd_wdata_1),
+        .rvfi_pc_rdata(),
+        .rvfi_pc_wdata(),
+        .rvfi_mem_addr(mem_addr_1),
+        .rvfi_mem_rmask(mem_rmask_1),
+        .rvfi_mem_wmask(mem_wmask_1),
+        .rvfi_mem_rdata(mem_rdata_1),
+        .rvfi_mem_wdata(mem_wdata_1),
+    `endif
     );
 
     ibex_core #(
@@ -243,9 +292,31 @@ module top (
         .core_sleep_o           (core_sleep_2),
 
         .fetch_o                (fetch_2),
-        .retire_o               (retire_2),
-        .retire_instr_o         (retire_instr_2),
-        .regfile_o              (regfile_2),
+
+    `ifdef RVFI
+        .rvfi_valid(retire_2),
+        .rvfi_order(),
+        .rvfi_insn(retire_instr_2),
+        .rvfi_trap(),
+        .rvfi_halt(),
+        .rvfi_mode(),
+        .rvfi_ixl(),
+        .rvfi_rs1_addr(rs1_2),
+        .rvfi_rs2_addr(rs2_2),
+        .rvfi_rs3_addr(),
+        .rvfi_rs1_rdata(rs1_rdata_2),
+        .rvfi_rs2_rdata(rs2_rdata_2),
+        .rvfi_rs3_rdata(),
+        .rvfi_rd_addr(rd_2),
+        .rvfi_rd_wdata(rd_wdata_2),
+        .rvfi_pc_rdata(),
+        .rvfi_pc_wdata(),
+        .rvfi_mem_addr(mem_addr_2),
+        .rvfi_mem_rmask(mem_rmask_2),
+        .rvfi_mem_wmask(mem_wmask_2),
+        .rvfi_mem_rdata(mem_rdata_2),
+        .rvfi_mem_wdata(mem_wdata_2),
+    `endif
     );
 
     atk atk (
@@ -255,17 +326,55 @@ module top (
         .atk_equiv_o            (atk_equiv),
     );
 
+assign mem_r_data_1 = {
+            mem_rmask_1[3] ? mem_rdata_1[31:24] : 8'b0,
+            mem_rmask_1[2] ? mem_rdata_1[23:16] : 8'b0,
+            mem_rmask_1[1] ? mem_rdata_1[15:8] : 8'b0,
+            mem_rmask_1[0] ? mem_rdata_1[7:0] : 8'b0
+            };
+assign mem_w_data_1 = {
+            mem_wmask_1[3] ? mem_wdata_1[31:24] : 8'b0,
+            mem_wmask_1[2] ? mem_wdata_1[23:16] : 8'b0,
+            mem_wmask_1[1] ? mem_wdata_1[15:8] : 8'b0,
+            mem_wmask_1[0] ? mem_wdata_1[7:0] : 8'b0
+            };
+
+assign mem_r_data_2 = {
+            mem_rmask_2[3] ? mem_rdata_2[31:24] : 8'b0,
+            mem_rmask_2[2] ? mem_rdata_2[23:16] : 8'b0,
+            mem_rmask_2[1] ? mem_rdata_2[15:8] : 8'b0,
+            mem_rmask_2[0] ? mem_rdata_2[7:0] : 8'b0
+            };
+assign mem_w_data_2 = {
+            mem_wmask_2[3] ? mem_wdata_2[31:24] : 8'b0,
+            mem_wmask_2[2] ? mem_wdata_2[23:16] : 8'b0,
+            mem_wmask_2[1] ? mem_wdata_2[15:8] : 8'b0,
+            mem_wmask_2[0] ? mem_wdata_2[7:0] : 8'b0
+            };
+
     ctr ctr (
         .clk_i                  (clock),
         .retire_i               (retire),
         .instr_1_i              (retire_instr_1),
         .instr_2_i              (retire_instr_2),
-        .regfile_1_i            (regfile_1),
-        .regfile_2_i            (regfile_2),
-        .mem_addr_1_i           (mem_addr_1),
-        .mem_addr_2_i           (mem_addr_2),
-        .mem_data_1_i           (mem_data_1),
-        .mem_data_2_i           (mem_data_2),
+        .rd_1                   (rd_1),
+        .rd_2                   (rd_2),
+        .rs1_1                  (rs1_1),
+        .rs1_2                  (rs1_2),
+        .rs2_1                  (rs2_1),
+        .rs2_2                  (rs2_2),
+        .reg_rs1_1              (rs1_rdata_1),
+        .reg_rs1_2              (rs1_rdata_2),
+        .reg_rs2_1              (rs2_rdata_1),
+        .reg_rs2_2              (rs2_rdata_2),
+        .reg_rd_1               (rd_wdata_1),
+        .reg_rd_2               (rd_wdata_2),
+        .mem_addr_1             (mem_addr_1),
+        .mem_addr_2             (mem_addr_2),
+        .mem_r_data_1           (mem_r_data_1),
+        .mem_r_data_2           (mem_r_data_2),
+        .mem_w_data_1           (mem_w_data_1),
+        .mem_w_data_2           (mem_w_data_2),
         .ctr_equiv_o            (ctr_equiv),
     );
 

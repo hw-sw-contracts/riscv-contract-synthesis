@@ -3,10 +3,16 @@ package contractgen.generator.smt;
 import contractgen.*;
 import contractgen.util.Pair;
 
+/**
+ * A generator that uses SMT to perform a bounded model check.
+ */
 public class SimpleSMTGenerator extends Generator {
 
-    public SimpleSMTGenerator(contractgen.MARCH march) {
-        super(march);
+    /**
+     * @param MARCH The microarchitecture to be used.
+     */
+    public SimpleSMTGenerator(contractgen.MARCH MARCH) {
+        super(MARCH);
     }
 
     @Override

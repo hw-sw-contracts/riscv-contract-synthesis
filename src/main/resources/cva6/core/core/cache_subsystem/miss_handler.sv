@@ -147,7 +147,7 @@ module miss_handler import ariane_pkg::*; import std_cache_pkg::*; #(
       data_i[0].tag, data_i[1].tag, data_i[2].tag, data_i[3].tag, data_i[4].tag, data_i[5].tag, data_i[6].tag, data_i[7].tag,
       serve_amo_q,state_q, cnt_q, evict_way_q, evict_cl_q, mshr_q, amo_req_i.req, busy_i, flush_i,
       miss_req_valid,miss_req_bypass, miss_req_we,miss_req_addr,miss_req_wdata,miss_req_be, lfsr_oh,valid_miss_fsm, evict_way_q,data_miss_fsm,
-      evict_cl_q,amo_req_i.amo_op,amo_req_i.operand_a,amo_req_i.size,amo_req_i.operand_b,amo_bypass_rsp.gnt,amo_bypass_rsp.valid,amo_bypass_rsp.rdata
+      evict_cl_q,amo_req_i.amo_op,amo_req_i.operand_a,amo_req_i.size,amo_req_i.operand_b,amo_bypass_rsp.gnt,amo_bypass_rsp.valid,amo_bypass_rsp.rdata, gnt_miss_fsm
       ) begin : cache_management
         automatic logic [DCACHE_SET_ASSOC-1:0] evict_way, valid_way;
 

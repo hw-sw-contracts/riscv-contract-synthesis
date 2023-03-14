@@ -8,6 +8,9 @@ import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * A RISC-V program
+ */
 public class RISCVProgram implements Program {
 
     private static final int NUMBER_REGISTERS = 32;
@@ -15,6 +18,12 @@ public class RISCVProgram implements Program {
 
     private final List<RISCVInstruction> program;
 
+    private static final List<RISCV_TYPE> loads = List.of(RISCV_TYPE.LB, RISCV_TYPE.LBU, RISCV_TYPE.LH, RISCV_TYPE.LHU, RISCV_TYPE.LW);
+
+    /**
+     * @param registers The initial register values.
+     * @param program   The sequence of instructions.
+     */
     public RISCVProgram(Map<Integer, Integer> registers, List<RISCVInstruction> program) {
         this.registers = registers;
         this.program = program;

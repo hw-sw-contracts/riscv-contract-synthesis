@@ -5,6 +5,9 @@ import contractgen.Program;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * A program for the toy example.
+ */
 public class SimpleProgram implements Program {
 
     private static final int NUMBER_REGISTERS = 8;
@@ -12,6 +15,10 @@ public class SimpleProgram implements Program {
 
     private final List<SimpleInstruction> program;
 
+    /**
+     * @param registers The initial values of the registers.
+     * @param program   The sequence of instructions.
+     */
     public SimpleProgram(Map<Integer, Integer> registers, List<SimpleInstruction> program) {
         this.registers = registers;
         this.program = program;

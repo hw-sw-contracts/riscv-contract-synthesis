@@ -11,7 +11,16 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+/**
+ * Util methods related to the filesystem.
+ */
 public class FileUtils {
+    /**
+     * @param source        The source file or folder.
+     * @param dest          The destination file or folder.
+     * @param options       The options used to copy the file or folder.
+     * @throws IOException  On filesystem errors.
+     */
     public static void copyFileOrFolder(File source, File dest, CopyOption... options) throws IOException {
         if (source.isDirectory())
             copyFolder(source, dest, options);
@@ -20,7 +29,12 @@ public class FileUtils {
             copyFile(source, dest, options);
         }
     }
-
+    /**
+     * @param source        The source folder.
+     * @param dest          The destination folder.
+     * @param options       The options used to copy the folder.
+     * @throws IOException  On filesystem errors.
+     */
     private static void copyFolder(File source, File dest, CopyOption... options) throws IOException {
         if (!dest.exists()) {
             boolean success = dest.mkdirs();
@@ -38,6 +52,12 @@ public class FileUtils {
         }
     }
 
+    /**
+     * @param source        The source file.
+     * @param dest          The destination file.
+     * @param options       The options used to copy the file.
+     * @throws IOException  On filesystem errors.
+     */
     private static void copyFile(File source, File dest, CopyOption... options) throws IOException {
         Files.copy(source.toPath(), dest.toPath(), options);
     }
@@ -50,6 +70,11 @@ public class FileUtils {
         }
     }
 
+    /**
+     * @param filePath      The file path.
+     * @param text          The string to be replaced.
+     * @param replacement   The replacement string.
+     */
     public static void replaceString(String filePath, String text, String replacement) {
 
         Path path = Paths.get(filePath);

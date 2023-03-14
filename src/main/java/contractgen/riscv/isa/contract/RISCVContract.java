@@ -14,8 +14,14 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+/**
+ * A contract for the RISC-V ISA.
+ */
 public class RISCVContract extends Contract {
 
+    /**
+     * @param updater The updater to be used to compute the contract.
+     */
     public RISCVContract(Updater updater) {
         super(updater);
     }
@@ -50,13 +56,19 @@ public class RISCVContract extends Contract {
     public String toString() {
         StringBuilder sb = new StringBuilder("Current negative results: \n");
         getTestResults().stream().filter(res -> res.isAdversaryDistinguishable()).forEach(ctx ->sb.append(ctx).append("\n"));
-        sb.append("Current positive results: \n");
-        getTestResults().stream().filter(res -> !res.isAdversaryDistinguishable()).forEach(ctx ->sb.append(ctx).append("\n"));
+        //sb.append("Current positive results: \n");
+        //getTestResults().stream().filter(res -> !res.isAdversaryDistinguishable()).forEach(ctx ->sb.append(ctx).append("\n"));
         sb.append("Inferred contract: \n");
         getCurrentContract().forEach(obs -> sb.append(obs.toString()).append("\n"));
         return sb.toString();
     }
 
+    /**
+     * Reads a json string and instantiates the according contract.
+     *
+     * @param json A string with the serialized contract.
+     * @return     A new contract as specified in the json.
+     */
     public static RISCVContract fromJSON(String json) {
         GsonBuilder builder = new GsonBuilder();
         builder.registerTypeAdapter(TestResult.class, new TestResultDeserializer());
@@ -68,6 +80,9 @@ public class RISCVContract extends Contract {
         return gson.fromJson(json, RISCVContract.class);
     }
 
+    /**
+     * Deserializes the class TestResult.
+     */
     public static class TestResultDeserializer implements JsonDeserializer<TestResult> {
 
         @Override
@@ -78,11 +93,15 @@ public class RISCVContract extends Contract {
             Gson gson = builder.create();
             JsonArray jsonPossibilities = jsonObject.get("observations").getAsJsonArray();
             boolean adversaryDistinguishable = jsonObject.get("adversaryDistinguishable").getAsBoolean();
+            int index = jsonObject.has("index") ? jsonObject.get("index").getAsInt() : 0;
             Set<RISCVObservation> possibilities = jsonPossibilities.asList().stream().map(jsonE -> gson.fromJson(jsonE, RISCVObservation.class)).collect(Collectors.toSet());
-            return new RISCVTestResult(possibilities, adversaryDistinguishable);
+            return new RISCVTestResult(possibilities, adversaryDistinguishable, index);
         }
     }
 
+    /**
+     * Deserializes an observation.
+     */
     public static class ObservationDeserializer implements JsonDeserializer<Observation> {
 
         @Override
@@ -97,10 +116,14 @@ public class RISCVContract extends Contract {
         }
     }
 
+    /**
+     * Deserializes the updater.
+     */
     public static class UpdaterDeserializer implements JsonDeserializer<Updater> {
 
         @Override
         public Updater deserialize(JsonElement jsonElement, Type type, JsonDeserializationContext jsonDeserializationContext) throws JsonParseException {
+            // TODO Allow to specify the updater or read it from json.
             return new ILPUpdater();
         }
     }

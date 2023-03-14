@@ -3,6 +3,7 @@ package contractgen.riscv.cva6;
 import contractgen.*;
 import contractgen.riscv.isa.RISCV;
 import contractgen.riscv.isa.RISCVInstruction;
+import contractgen.riscv.isa.RISCV_TYPE;
 import contractgen.riscv.isa.contract.RISCVTestResult;
 import contractgen.riscv.isa.contract.RISCVObservation;
 import contractgen.riscv.isa.contract.RISCV_OBSERVATION_TYPE;
@@ -16,6 +17,8 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
@@ -25,6 +28,9 @@ import static contractgen.util.FileUtils.replaceString;
 import static contractgen.util.ScriptUtils.runScript;
 import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 
+/**
+ * The CVA6 microarchitecture.
+ */
 public class CVA6 extends MARCH {
 
 
@@ -33,6 +39,10 @@ public class CVA6 extends MARCH {
     protected String COMPILATION_PATH = "/home/yosys/output/cva6/compiled/";
     protected String SIMULATION_PATH = "/home/yosys/output/cva6/simulation/";
 
+    /**
+     * @param updater   The updater to be used to update the contract.
+     * @param testCases The test cases to be used for generation or evaluation.
+     */
     public CVA6(Updater updater, TestCases testCases) {
         super(new RISCV(updater, testCases));
     }
@@ -60,48 +70,33 @@ public class CVA6 extends MARCH {
 
     @Override
     public Pair<TestResult, TestResult> extractCTX(TestCase testCase) {
-        return extractCTX(SIMULATION_PATH);
+        return extractCTX(SIMULATION_PATH, testCase.getIndex());
     }
 
     @Override
     public Pair<TestResult, TestResult> extractCTX(int id, TestCase testCase) {
-        //System.out.println("Analyzing " + testCase);
-        return extractCTX(SIMULATION_PATH + id + "/");
+        return extractCTX(SIMULATION_PATH + id + "/", testCase.getIndex());
     }
 
-    public Pair<TestResult, TestResult> extractCTX(String PATH) {
-        VcdFile vcd;
-        try {
-            vcd = new VcdFile(Files.readString(Path.of(PATH + "sim.vcd")));
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-        int failTime = vcd.getTop().getChild("atk").getWire("atk_equiv_o").getLastChangeTime();
-        int fetch_1 = Integer.parseInt(vcd.getTop().getChild("control").getWire("fetch_1_count").getValueAt(failTime), 2);
-        int fetch_2 = Integer.parseInt(vcd.getTop().getChild("control").getWire("fetch_2_count").getValueAt(failTime), 2);
-        int retire = Integer.parseInt(vcd.getTop().getChild("control").getWire("retire_count").getValueAt(failTime), 2);
-        int currentGuess = Integer.max(fetch_1, fetch_2);
-        while (currentGuess >= retire && !simulateSteps(PATH, currentGuess)) {
-            currentGuess--;
-        }
-        simulateSteps(PATH, currentGuess + 1);
-        return extractDifferences(PATH, true);
+    private Pair<TestResult, TestResult> extractCTX(String PATH, int index) {
+        return extractDifferences(PATH, true, index);
     }
 
     @Override
-    public Pair<TestResult, TestResult> extractDifferences() {
-        return extractDifferences(SIMULATION_PATH, false);
+    public Pair<TestResult, TestResult> extractDifferences(int index) {
+        return extractDifferences(SIMULATION_PATH, false, index);
     }
 
     @Override
-    public Pair<TestResult, TestResult> extractDifferences(int id) {
-        return extractDifferences(SIMULATION_PATH + id + "/", false);
+    public Pair<TestResult, TestResult> extractDifferences(int id, int index) {
+        return extractDifferences(SIMULATION_PATH + id + "/", false, index);
     }
 
-    public Pair<TestResult, TestResult> extractDifferences(String PATH, boolean adversaryDistinguishable) {
+    private Pair<TestResult, TestResult> extractDifferences(String PATH, boolean adversaryDistinguishable, int index) {
         VcdFile vcd;
+        Path vcd_path = Path.of(PATH + "sim.vcd");
         try {
-            vcd = new VcdFile(Files.readString(Path.of(PATH + "sim.vcd")));
+            vcd = new VcdFile(Files.readString(vcd_path));
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -110,17 +105,18 @@ public class CVA6 extends MARCH {
         Wire retire_count = vcd.getTop().getChild("control").getWire("retire_count");
         int currentGuess = Integer.parseInt(retire_count.getValueAt(retire_count.getLastChangeTime()), 2);
         while (currentGuess > 0) {
-            //RISCVInstruction instr_1 = RISCVInstruction.parseBinaryString(vcd.getTop().getChild("ctr").getWire("instr_1_i").getValueAt(retire_count.getFirstTimeValue(StringUtils.toBinaryEncoding((long) currentGuess))));
-            //RISCVInstruction instr_2 = RISCVInstruction.parseBinaryString(vcd.getTop().getChild("ctr").getWire("instr_2_i").getValueAt(retire_count.getFirstTimeValue(StringUtils.toBinaryEncoding((long) currentGuess))));
-            Integer retire_time = retire_count.getFirstTimeValue(StringUtils.toBinaryEncoding((long) currentGuess)) - 10;
-            //System.out.println("Looking at time " + currentGuess + " time " + retire_time);
-            RISCVInstruction instr_1 = RISCVInstruction.parseBinaryString(vcd.getTop().getWire("retire_instr_1").getValueAt(retire_time));
-            RISCVInstruction instr_2 = RISCVInstruction.parseBinaryString(vcd.getTop().getWire("retire_instr_2").getValueAt(retire_time));
+            Integer retire_time = retire_count.getFirstTimeValue(StringUtils.toBinaryEncoding((long) currentGuess)) - 20;
 
-           // assert instr_1 != null;
-            //System.out.println(instr_1);
-            //assert instr_2 != null;
-            //System.out.println(instr_2);
+            RISCVInstruction instr_1;
+            RISCVInstruction instr_2;
+            try {
+                instr_1 = RISCVInstruction.parseBinaryString(vcd.getTop().getChild("ctr").getWire("instr_1_i").getValueAt(retire_time));
+                instr_2 = RISCVInstruction.parseBinaryString(vcd.getTop().getChild("ctr").getWire("instr_2_i").getValueAt(retire_time));
+            } catch (Exception e) {
+                // invalid instruction
+                currentGuess--;
+                continue;
+            }
 
             Module ctr = vcd.getTop().getChild("ctr");
             String reg_rs1_1 = ctr.getWire("reg_rs1_1").getValueAt(retire_time);
@@ -139,11 +135,8 @@ public class CVA6 extends MARCH {
 
 
             if (!Objects.equals(instr_1.type(), instr_2.type())) {
-                currentGuess--;
-                continue;
-                //throw new IllegalStateException("Why?" + instr_1 + instr_2);
-                //obs1.add(new RISCVObservation(instr_1.type(), RISCV_OBSERVATION_TYPE.OPCODE));
-                //obs2.add(new RISCVObservation(instr_2.type(), RISCV_OBSERVATION_TYPE.OPCODE));
+                obs1.add(new RISCVObservation(instr_1.type(), RISCV_OBSERVATION_TYPE.OPCODE));
+                obs2.add(new RISCVObservation(instr_2.type(), RISCV_OBSERVATION_TYPE.OPCODE));
             }
 
             if (!Objects.equals(instr_1.rd(), instr_2.rd())) {
@@ -191,11 +184,7 @@ public class CVA6 extends MARCH {
             currentGuess--;
         }
 
-        //if (obs1.isEmpty() && obs2.isEmpty()) {
-        //    throw new IllegalStateException("Something went wrong here...");
-        //}
-
-        return new Pair<>(new RISCVTestResult(obs1, adversaryDistinguishable), new RISCVTestResult(obs2, adversaryDistinguishable));
+        return new Pair<>(new RISCVTestResult(obs1, adversaryDistinguishable, index * 2), new RISCVTestResult(obs2, adversaryDistinguishable, (index * 2) + 1));
     }
 
     @Override
@@ -209,7 +198,7 @@ public class CVA6 extends MARCH {
         synchronized (getISA().getContract()) {
             replaceString(BASE_PATH + "verif/ctr.sv", "/* CONTRACT */", getISA().getContract().printContract());
         }
-        runScript("/bin/bash " + BASE_PATH + "compile.sh " + BASE_PATH + " " + COMPILATION_PATH, false);
+        runScript("/bin/bash " + BASE_PATH + "compile.sh " + BASE_PATH + " " + COMPILATION_PATH, false, 240);
         System.out.println("Compilation finished.");
     }
 
@@ -223,7 +212,7 @@ public class CVA6 extends MARCH {
         writeTestCase(SIMULATION_PATH + id + "/", testCase);
     }
 
-    public void writeTestCase(String PATH, TestCase testCase) {
+    private void writeTestCase(String PATH, TestCase testCase) {
         try {
             copyFileOrFolder(Path.of(COMPILATION_PATH + "ariane").toFile(), Path.of(PATH + "ariane").toFile(), REPLACE_EXISTING);
         } catch (IOException e) {
@@ -241,32 +230,41 @@ public class CVA6 extends MARCH {
     }
 
     @Override
-    public boolean simulate() {
+    public SIMULATION_RESULT simulate() {
         return simulate(SIMULATION_PATH);
     }
 
     @Override
-    public boolean simulate(int id) {
+    public SIMULATION_RESULT simulate(int id) {
         return simulate(SIMULATION_PATH + id + "/");
     }
 
-    @Override
-    public String getName() {
-        return "cva6";
+    private SIMULATION_RESULT simulate(String PATH) {
+        String output = runScript(PATH + "ariane", true, 45);
+        if (output == null)
+            return SIMULATION_RESULT.UNKNOWN;
+        if (output.contains("FAIL"))
+            return SIMULATION_RESULT.FAIL;
+        if (output.contains("FALSE_POSITIVE"))
+            return SIMULATION_RESULT.FALSE_POSITIVE;
+        if (output.contains("SUCCESS"))
+            return SIMULATION_RESULT.SUCCESS;
+        if (output.contains("TIMEOUT"))
+            return SIMULATION_RESULT.TIMEOUT;
+        return SIMULATION_RESULT.UNKNOWN;
     }
 
-    public boolean simulate(String PATH) {
-        String output = runScript(PATH + "ariane", true);
-        assert output != null;
-        return !output.contains("FAIL");
-    }
-
-    public boolean simulateSteps(String PATH, int steps) {
+    private SIMULATION_RESULT simulateSteps(String PATH, int steps) {
         try {
             Files.write(Paths.get(PATH + "count.dat"), StringUtils.toHexEncoding((long) steps).getBytes());
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
         return simulate(PATH);
+    }
+
+    @Override
+    public String getName() {
+        return "cva6";
     }
 }

@@ -4,6 +4,10 @@ import contractgen.util.StringUtils;
 
 import static contractgen.util.axi.AXI_CONFIG.*;
 
+/**
+ * The W channel of the AXI interface.
+ */
+@SuppressWarnings("MissingJavadoc")
 public class AXI_W_CHAN {
 
     private final long data;

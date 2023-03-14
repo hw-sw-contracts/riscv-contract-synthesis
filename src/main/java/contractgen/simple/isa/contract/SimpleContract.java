@@ -8,8 +8,14 @@ import contractgen.updater.PowerSetUpdater;
 import java.util.*;
 import java.util.stream.Collectors;
 
+/**
+ * A contract for the simple ISA.
+ */
 public class SimpleContract extends Contract {
 
+    /**
+     * @param updater The updater to be used.
+     */
     public SimpleContract(Updater updater) {
         super(updater);
     }
@@ -43,22 +49,9 @@ public class SimpleContract extends Contract {
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder("Current counterexamples: \n");
-        getTestResults().forEach(ctx ->sb.append(ctx.toString()).append("\n"));
+        getTestResults().forEach(ctx -> sb.append(ctx.toString()).append("\n"));
         sb.append("Inferred contract: \n");
         getCurrentContract().forEach(obs -> sb.append(obs.toString()).append("\n"));
         return sb.toString();
-    }
-
-    public static void main(String[] args) {
-        SimpleContract c = new SimpleContract(new PowerSetUpdater());
-        Set<SimpleObservation> obs = new HashSet<>();
-        obs.add(new SimpleObservation(SIMPLE_TYPE.MUL, SIMPLE_OBSERVATION_TYPE.OPCODE));
-        obs.add(new SimpleObservation(SIMPLE_TYPE.MUL, SIMPLE_OBSERVATION_TYPE.RS1));
-        c.add(new SimpleTestResult(obs, true));
-        Set<SimpleObservation> obs2 = new HashSet<>();
-        obs2.add(new SimpleObservation(SIMPLE_TYPE.MUL, SIMPLE_OBSERVATION_TYPE.RS1));
-        c.add(new SimpleTestResult(obs2, true));
-        c.update(false);
-        System.out.println(c);
     }
 }

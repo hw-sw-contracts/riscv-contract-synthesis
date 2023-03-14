@@ -11,20 +11,46 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+/**
+ * A RISC-V instruction.
+ *
+ * @param type  The type of the instruction.
+ * @param rd    The destination register.
+ * @param rs1   The first operand.
+ * @param rs2   The second operand.
+ * @param imm   The immediate value.
+ */
+@SuppressWarnings("MissingJavadoc")
 public record RISCVInstruction(RISCV_TYPE type, Integer rd, Integer rs1, Integer rs2, Long imm) implements Instruction {
 
+    /**
+     * @param rd The new destination register.
+     * @return   A clone of the instruction with the given destination register.
+     */
     public RISCVInstruction cloneAlteringRD(Integer rd) {
         return new RISCVInstruction(this.type, rd, this.rs1, this.rs2, this.imm);
     }
 
+    /**
+     * @param rs1 The new first operand.
+     * @return    A clone of the instruction with the given first operand.
+     */
     public RISCVInstruction cloneAlteringRS1(Integer rs1) {
         return new RISCVInstruction(this.type, this.rd, rs1, this.rs2, this.imm);
     }
 
+    /**
+     * @param rs2 The new second operand.
+     * @return    A clone of the instruction with the given second opeand.
+     */
     public RISCVInstruction cloneAlteringRS2(Integer rs2) {
         return new RISCVInstruction(this.type, this.rd, this.rs1, rs2, this.imm);
     }
 
+    /**
+     * @param imm The new immediate value.
+     * @return    A clone of the instruction with the given immediate value.
+     */
     public RISCVInstruction cloneAlteringIMM(Long imm) {
         return new RISCVInstruction(this.type, this.rd, this.rs1, this.rs2, imm);
     }
@@ -44,10 +70,13 @@ public record RISCVInstruction(RISCV_TYPE type, Integer rd, Integer rs1, Integer
         return StringUtils.toHexEncoding(this.toBinaryEncoding());
     }
 
+    /**
+     * @param instr The instruction encoded in binary
+     * @return      The parsed instruction.
+     */
     public static RISCVInstruction parseBinaryString(String instr) {
         if (instr.length() != 32) instr = StringUtils.expandToLength(instr, 32, '0');
         final String instruction = instr;
-        //System.out.println("Looking for " + instruction.substring(25));
         Set<RISCV_TYPE> candidates = Set.of(RISCV_TYPE.values());
         candidates = candidates.stream().filter(t -> t.getOpcode().equals(instruction.substring(25))).collect(Collectors.toUnmodifiableSet());
         if (candidates.size() > 1)
@@ -77,6 +106,10 @@ public record RISCVInstruction(RISCV_TYPE type, Integer rd, Integer rs1, Integer
         };
     }
 
+    /**
+     * @param instruction The instruction encoded in hexadecimal.
+     * @return            The parsed instruction.
+     */
     public static RISCVInstruction parseHexString(String instruction) {
         if (instruction.length() == 10 && instruction.startsWith("0x"))
             instruction = instruction.substring(2);
@@ -113,52 +146,6 @@ public record RISCVInstruction(RISCV_TYPE type, Integer rd, Integer rs1, Integer
                 ", rs2=" + rs2 +
                 ", imm=" + imm +
                 '}';
-    }
-
-    public static void main(String[] args) {
-        RISCVInstruction i = RISCVInstruction.parseHexString("c5300213");
-        System.out.println(i);
-        //RISCVInstruction i = RISCVInstruction.SW(15, 31, 0);
-        //System.out.println(i.toHexEncoding());
-        //printHexFile(Path.of("/home/yosys/bachelor/ibex_iverilog_simulation/2/init_1.dat"));
-        //printHexFile(Path.of("/home/yosys/bachelor/ibex_iverilog_simulation/2/init_2.dat"));
-        //printHexFile(Path.of("/home/yosys/bachelor/ibex_iverilog_simulation/2/memory_1.dat"));
-        //printHexFile(Path.of("/home/yosys/bachelor/ibex_iverilog_simulation/2/memory_2.dat"));
-        //RISCVInstruction addi = RISCVInstruction.ADDI(1, 0, 10);
-        //RISCVInstruction addi_2 = RISCVInstruction.ADDI(2, 0, 30);
-        //RISCVInstruction op = RISCVInstruction.SUB(3, 1, 2);
-        //System.out.println(addi.toHexEncoding());
-        //System.out.println(addi_2.toHexEncoding());
-        //System.out.println(op.toHexEncoding());
-        /*
-        Instruction add = Instruction.ADD(10, 11, 12);
-        System.out.println(add.toBinaryEncoding());
-        System.out.println(add.toHexEncoding());
-        Instruction i = Instruction.parseBinaryString(add.toBinaryEncoding());
-        System.out.println(i);
-        System.out.println(Instruction.parseHexString("0x3e800093"));
-        System.out.println(Instruction.parseHexString("0x7d008113"));
-        System.out.println(Instruction.parseHexString("0xc1810193"));
-        System.out.println(Instruction.parseHexString("0x83018213"));
-        System.out.println(Instruction.parseHexString("0x3e820293"));
-        Instruction addi = Instruction.ADDI(1, 0, 1001);
-        System.out.println(addi.toHexEncoding());
-        System.out.println(Instruction.NOP().toHexEncoding());
-         */
-    }
-
-    public static void printHexFile(Path path) {
-        System.out.println("Reading " + path.toString());
-        String s;
-        try {
-            s = Files.readString(path);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-        String[] lines = s.split("\n");
-        for (String line : lines) {
-            System.out.println(Objects.requireNonNull(RISCVInstruction.parseHexString(line)) + " (0x" + Objects.requireNonNull(RISCVInstruction.parseHexString(line)).toHexEncoding() + ")");
-        }
     }
 
 
@@ -369,11 +356,4 @@ public record RISCVInstruction(RISCV_TYPE type, Integer rd, Integer rs1, Integer
     public static RISCVInstruction NOP() {
         return RISCVInstruction.ITYPE(RISCV_TYPE.ADDI, 0, 0, 0L);
     }
-
-    public static final Set<RISCV_TYPE> RTYPE_INSTRUCTIONS = Stream.of(RISCV_TYPE.SLLI, RISCV_TYPE.SRLI, RISCV_TYPE.SRAI, RISCV_TYPE.ADD, RISCV_TYPE.SUB, RISCV_TYPE.SLL, RISCV_TYPE.SLT, RISCV_TYPE.SLTU, RISCV_TYPE.XOR, RISCV_TYPE.SRL, RISCV_TYPE.SRA, RISCV_TYPE.OR, RISCV_TYPE.AND).collect(Collectors.toUnmodifiableSet());
-    public static final Set<RISCV_TYPE> ITYPE_INSTRUCTIONS = Stream.of(RISCV_TYPE.JALR, RISCV_TYPE.LB, RISCV_TYPE.LH, RISCV_TYPE.LW, RISCV_TYPE.LBU, RISCV_TYPE.LHU, RISCV_TYPE.ADDI, RISCV_TYPE.SLTI, RISCV_TYPE.SLTIU, RISCV_TYPE.XORI, RISCV_TYPE.ORI, RISCV_TYPE.ANDI).collect(Collectors.toUnmodifiableSet());
-    public static final Set<RISCV_TYPE> STYPE_INSTRUCTIONS = Stream.of(RISCV_TYPE.SB, RISCV_TYPE.SH, RISCV_TYPE.SW).collect(Collectors.toUnmodifiableSet());
-    public static final Set<RISCV_TYPE> BTYPE_INSTRUCTIONS = Stream.of(RISCV_TYPE.BEQ, RISCV_TYPE.BNE, RISCV_TYPE.BLT, RISCV_TYPE.BGE, RISCV_TYPE.BLTU, RISCV_TYPE.BGEU).collect(Collectors.toUnmodifiableSet());
-    public static final Set<RISCV_TYPE> UTYPE_INSTRUCTIONS = Stream.of(RISCV_TYPE.LUI, RISCV_TYPE.AUIPC).collect(Collectors.toUnmodifiableSet());
-    public static final Set<RISCV_TYPE> JTYPE_INSTRUCTIONS = Stream.of(RISCV_TYPE.JAL).collect(Collectors.toUnmodifiableSet());
 }

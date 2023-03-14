@@ -1,5 +1,9 @@
 package contractgen.simple.isa;
 
+/**
+ * The type of an simple instruction.
+ */
+@SuppressWarnings("MissingJavadoc")
 public enum SIMPLE_TYPE {
     ADD("add", "00000001"),
     ADDI("addi", "00000010"),

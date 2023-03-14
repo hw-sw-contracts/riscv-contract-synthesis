@@ -60,9 +60,6 @@ module riscv_decoder (
     assign funct_3_o = instr_i[14:12];
     assign funct_7_o = instr_i[31:25];
     assign format_o = (
-                            op_o == `SLLI_OP || 
-                            op_o == `SRLI_OP || 
-                            op_o == `SRAI_OP || 
                             op_o == `ADD_OP || 
                             op_o == `SUB_OP || 
                             op_o == `SLL_OP || 
@@ -76,6 +73,9 @@ module riscv_decoder (
                         ) ? `TYPE_R : 
                         (
                             (
+                                op_o == `SLLI_OP ||
+                                op_o == `SRLI_OP ||
+                                op_o == `SRAI_OP ||
                                 op_o == `JALR_OP ||
                                 op_o == `LB_OP ||
                                 op_o == `LH_OP ||
