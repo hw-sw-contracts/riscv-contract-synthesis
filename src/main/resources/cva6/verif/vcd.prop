@@ -16,22 +16,24 @@
     end
 
     initial
-	begin
-		$dumpfile("sim.vcd");
-		//$dumpvars();
+    begin
+        $dumpfile("sim.vcd");
+        //$dumpvars();
         $dumpvars(1, top);
         $dumpvars(1, top.ctr);
-		$dumpvars(1, top.control);
-		$dumpvars(1, top.atk);
-		#200000;
+        $dumpvars(1, top.control);
+        $dumpvars(1, top.atk);
+        //$dumpvars(16, top.core_1);
+        //$dumpvars(1, top.mem_1);
+        #30000;
         $display("TIMEOUT");
-		$finish;
-	end
+        $finish;
+    end
 
     always begin
-		clk <= 1;
+        clk <= 1;
         #5;
-		clk <= 0;
+        clk <= 0;
         #5;
     end
     

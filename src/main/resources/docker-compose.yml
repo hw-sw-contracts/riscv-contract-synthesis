@@ -4,11 +4,11 @@ services:
   yosys:
     container_name: yosys
     build: .
-    # image: gdnmhr/symbiyosys:latest
+    # image: gdnmhr/contractgen:latest
     volumes:
       - .:/home/yosys/resources
       - ../../..:/home/yosys/project
-    #entrypoint: /bin/bash
+    # entrypoint: /bin/bash
     entrypoint: /home/yosys/resources/run.sh
     stdin_open: true
     tty: true

@@ -29,8 +29,19 @@ public enum SIMPLE_OBSERVATION_TYPE {
      */
     REG_RS2(6, "reg_rs2");
 
+    /**
+     * The severity of the observation
+     */
     final int value;
+    /**
+     * The verilog encoding of the observation
+     */
     private final String encoding;
+
+    /**
+     * @param value    The severity of the observation
+     * @param encoding The verilog encoding of the observation
+     */
     SIMPLE_OBSERVATION_TYPE(int value, String encoding) {
         this.value = value;
         this.encoding = encoding;
@@ -39,9 +50,9 @@ public enum SIMPLE_OBSERVATION_TYPE {
     /**
      * Generates a Verilog encoding of the observation.
      *
-     * @param suffix           The index of the core to select the accurate value.
-     * @param hasObservation   Whether any observation should be produced.
-     * @return                 The respective observation in Verilog.
+     * @param suffix         The index of the core to select the accurate value.
+     * @param hasObservation Whether any observation should be produced.
+     * @return The respective observation in Verilog.
      */
     public String generateObservation(String suffix, boolean hasObservation) {
         return "ctr_observation_" + suffix + "." + this.encoding + " = " + (hasObservation ? encoding + "_" + suffix : "0") + ";\n";

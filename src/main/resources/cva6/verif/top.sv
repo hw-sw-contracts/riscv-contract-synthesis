@@ -1,6 +1,6 @@
 import ariane_pkg::*;
-import ariane_rvfi_pkg::*;
-
+import cva6_axi_pkg::*;
+import rvfi_pkg::*;
 
 /// An AXI4 interface.
 interface AXI_BUS #(
@@ -108,19 +108,16 @@ module top (
 	initial begin
 		reset_1 <= 0;
 		reset_2 <= 0;
-	end
-	always @(posedge clock) begin
+		#20;
 		reset_1 <= 1;
 		reset_2 <= 1;
-    end
+	end
 
-    
 	integer counter;
 	initial counter <= 0;
 	always @(posedge clock) begin
 		counter <= counter +1;
 	end
-
 
     logic req_1;
     logic req_2;
@@ -133,39 +130,6 @@ module top (
     logic [63:0] data_r_1;
     logic [63:0] data_r_2;
 
-
-    logic retire_1 = 0;
-    logic retire_2 = 0;
-    logic [31:0] retire_instr_1;
-    logic [31:0] retire_instr_2;
-    logic fetch_1;
-    logic fetch_2;
-    logic [4:0] rd_1;
-    logic [4:0] rd_2;
-    logic [4:0] rs1_1;
-    logic [4:0] rs1_2;
-    logic [4:0] rs2_1;
-    logic [4:0] rs2_2;
-    logic [31:0] reg_rs1_1;
-    logic [31:0] reg_rs1_2;
-    logic [31:0] reg_rs2_1;
-    logic [31:0] reg_rs2_2;
-    logic [31:0] reg_rd_1;
-    logic [31:0] reg_rd_2;
-    logic [31:0] mem_addr_1;
-    logic [31:0] mem_addr_2;
-    logic [31:0] mem_r_data_1;
-    logic [31:0] mem_r_data_2;
-    logic [31:0] mem_w_data_1;
-    logic [31:0] mem_w_data_2;
-
-
-    logic [31:0] pc_rdata_1_1;
-    logic [31:0] pc_rdata_1_2;
-    logic [31:0] pc_rdata_2_1;
-    logic [31:0] pc_rdata_2_2;
-
-
     logic retire;
     logic atk_equiv;
     logic ctr_equiv;
@@ -174,214 +138,118 @@ module top (
     logic enable_2;
     logic finished;
 
-    logic sel_1;
-    logic sel_2;
+    rvfi_instr_t rvfi_1;
 
-`ifdef RVFI_TRACE
-    rvfi_instr_t [1:0] rvfi_1;
+    logic retire_1;
+    logic [31:0] retire_instr_1;
+    logic fetch_1;
+    logic [4:0] rd_1;
+    logic [4:0] rs1_1;
+    logic [4:0] rs2_1;
+    logic [31:0] reg_rs1_1;
+    logic [31:0] reg_rs2_1;
+    logic [31:0] reg_rd_1;
+    logic [31:0] mem_addr_1;
+    logic [31:0] mem_addr_real_1;
+    logic [31:0] mem_r_data_1;
+    logic [31:0] mem_w_data_1;
+    logic [31:0] pc_rdata_1;
+    logic [31:0] new_pc_1;
 
-    logic valid_1_1;
-    logic valid_1_2;
-    logic [31:0] insn_1_1;
-    logic [31:0] insn_1_2;
-    logic [4:0] rd_1_1;
-    logic [4:0] rd_1_2;
-    logic [4:0] rs1_1_1;
-    logic [4:0] rs1_1_2;
-    logic [4:0] rs2_1_1;
-    logic [4:0] rs2_1_2;
-    logic [31:0] rs1_rdata_1_1;
-    logic [31:0] rs1_rdata_1_2;
-    logic [31:0] rs2_rdata_1_1;
-    logic [31:0] rs2_rdata_1_2;
-    logic [31:0] rd_wdata_1_1;
-    logic [31:0] rd_wdata_1_2;
-    logic [31:0] mem_addr_1_1;
-    logic [31:0] mem_addr_1_2;
-    logic [31:0] mem_rdata_1_1;
-    logic [31:0] mem_rdata_1_2;
-    logic [31:0] mem_wdata_1_1;
-    logic [31:0] mem_wdata_1_2;
-    logic [3:0]  mem_rmask_1_1;
-    logic [3:0]  mem_rmask_1_2;
-    logic [3:0]  mem_wmask_1_1;
-    logic [3:0]  mem_wmask_1_2;
+    logic [31:0] mem_rdata_1;
+    logic [31:0] mem_wdata_1;
+    logic [3:0]  mem_rmask_1;
+    logic [3:0]  mem_wmask_1;
 
-    rvfi_unwrap rvfi_unwrap_1_1 (
-        .rvfi_instr_i (rvfi_1[0]),
-        .valid_o(valid_1_1),
-        .insn_o(insn_1_1),
-        .rs1_addr_o(rs1_1_1),
-        .rs2_addr_o(rs2_1_1),
-        .rs1_rdata_o(rs1_rdata_1_1),
-        .rs2_rdata_o(rs2_rdata_1_1),
-        .rd_addr_o(rd_1_1),
-        .rd_wdata_o(rd_wdata_1_1),
-        .mem_addr_o(mem_addr_1_1),
-        .mem_rdata_o(mem_rdata_1_1),
-        .mem_wdata_o(mem_wdata_1_1),
-        .pc_rdata_o(pc_rdata_1_1),
-        .mem_rmask_o(mem_rmask_1_1),
-        .mem_wmask_o(mem_wmask_1_1),
+    rvfi_unwrap rvfi_unwrap_1 (
+        .rvfi_instr_i (rvfi_1),
+        .valid_o(retire_1),
+        .insn_o(retire_instr_1),
+        .rs1_addr_o(rs1_1),
+        .rs2_addr_o(rs2_1),
+        .rs1_rdata_o(reg_rs1_1),
+        .rs2_rdata_o(reg_rs2_1),
+        .rd_addr_o(rd_1),
+        .rd_wdata_o(reg_rd_1),
+        .mem_addr_o(mem_addr_1),
+        .mem_rdata_o(mem_rdata_1),
+        .mem_wdata_o(mem_wdata_1),
+        .pc_rdata_o(pc_rdata_1),
+        .pc_wdata_o(new_pc_1),
+        .mem_rmask_o(mem_rmask_1),
+        .mem_wmask_o(mem_wmask_1)
     );
 
-    rvfi_unwrap rvfi_unwrap_1_2 (
-        .rvfi_instr_i (rvfi_1[1]),
-        .valid_o(valid_1_2),
-        .insn_o(insn_1_2),
-        .rs1_addr_o(rs1_1_2),
-        .rs2_addr_o(rs2_1_2),
-        .rs1_rdata_o(rs1_rdata_1_2),
-        .rs2_rdata_o(rs2_rdata_1_2),
-        .rd_addr_o(rd_1_2),
-        .rd_wdata_o(rd_wdata_1_2),
-        .mem_addr_o(mem_addr_1_2),
-        .mem_rdata_o(mem_rdata_1_2),
-        .mem_wdata_o(mem_wdata_1_2),
-        .pc_rdata_o(pc_rdata_1_2),
-        .mem_rmask_o(mem_rmask_1_2),
-        .mem_wmask_o(mem_wmask_1_2),
+    assign mem_r_data_1 = {
+                mem_rmask_1[3] ? mem_rdata_1[31:24] : 8'b0,
+                mem_rmask_1[2] ? mem_rdata_1[23:16] : 8'b0,
+                mem_rmask_1[1] ? mem_rdata_1[15:8] : 8'b0,
+                mem_rmask_1[0] ? mem_rdata_1[7:0] : 8'b0
+            };
+    assign mem_w_data_1 = {
+                mem_wmask_1[3] ? mem_wdata_1[31:24] : 8'b0,
+                mem_wmask_1[2] ? mem_wdata_1[23:16] : 8'b0,
+                mem_wmask_1[1] ? mem_wdata_1[15:8] : 8'b0,
+                mem_wmask_1[0] ? mem_wdata_1[7:0] : 8'b0
+            };
+
+    rvfi_instr_t rvfi_2;
+
+    logic retire_2;
+    logic [31:0] retire_instr_2;
+    logic fetch_2;
+    logic [4:0] rd_2;
+    logic [4:0] rs1_2;
+    logic [4:0] rs2_2;
+    logic [31:0] reg_rs1_2;
+    logic [31:0] reg_rs2_2;
+    logic [31:0] reg_rd_2;
+    logic [31:0] mem_addr_2;
+    logic [31:0] mem_addr_real_2;
+    logic [31:0] mem_r_data_2;
+    logic [31:0] mem_w_data_2;
+    logic [31:0] pc_rdata_2;
+    logic [31:0] new_pc_2;
+
+    logic [31:0] mem_rdata_2;
+    logic [31:0] mem_wdata_2;
+    logic [3:0]  mem_rmask_2;
+    logic [3:0]  mem_wmask_2;
+
+    rvfi_unwrap rvfi_unwrap_2 (
+        .rvfi_instr_i (rvfi_2),
+        .valid_o(retire_2),
+        .insn_o(retire_instr_2),
+        .rs1_addr_o(rs1_2),
+        .rs2_addr_o(rs2_2),
+        .rs1_rdata_o(reg_rs1_2),
+        .rs2_rdata_o(reg_rs2_2),
+        .rd_addr_o(rd_2),
+        .rd_wdata_o(reg_rd_2),
+        .mem_addr_o(mem_addr_2),
+        .mem_rdata_o(mem_rdata_2),
+        .mem_wdata_o(mem_wdata_2),
+        .pc_rdata_o(pc_rdata_2),
+        .pc_wdata_o(new_pc_2),
+        .mem_rmask_o(mem_rmask_2),
+        .mem_wmask_o(mem_wmask_2)
     );
 
-    assign retire_instr_1 = sel_1 ? insn_1_2 : insn_1_1;
-    assign rs1_1 = sel_1 ? rs1_1_2 : rs1_1_1;
-    assign rs2_1 = sel_1 ? rs2_1_2 : rs2_1_1;
-    assign rd_1 = sel_1 ? rd_1_2 : rd_1_1;
-    assign reg_rs1_1 = sel_1 ? rs1_rdata_1_2 : rs1_rdata_1_1;
-    assign reg_rs2_1 = sel_1 ? rs2_rdata_1_2 : rs2_rdata_1_1;
-    assign reg_rd_1 = sel_1 ? rd_wdata_1_2 : rd_wdata_1_1;
-    assign mem_addr_1 = sel_1 ? mem_addr_1_2 : mem_addr_1_1;
-    assign mem_r_data_1 =
-        sel_1 ?
-            {   mem_rmask_1_2[3] ? mem_rdata_1_2[31:24] : 8'b0,
-                mem_rmask_1_2[2] ? mem_rdata_1_2[23:16] : 8'b0,
-                mem_rmask_1_2[1] ? mem_rdata_1_2[15:8] : 8'b0,
-                mem_rmask_1_2[0] ? mem_rdata_1_2[7:0] : 8'b0
-            }
-        :
-            {   mem_rmask_1_1[3] ? mem_rdata_1_1[31:24] : 8'b0,
-                mem_rmask_1_1[2] ? mem_rdata_1_1[23:16] : 8'b0,
-                mem_rmask_1_1[1] ? mem_rdata_1_1[15:8] : 8'b0,
-                mem_rmask_1_1[0] ? mem_rdata_1_1[7:0] : 8'b0
+    assign mem_r_data_2 = {
+                mem_rmask_2[3] ? mem_rdata_2[31:24] : 8'b0,
+                mem_rmask_2[2] ? mem_rdata_2[23:16] : 8'b0,
+                mem_rmask_2[1] ? mem_rdata_2[15:8] : 8'b0,
+                mem_rmask_2[0] ? mem_rdata_2[7:0] : 8'b0
             };
-    assign mem_w_data_1 =
-        sel_1 ?
-            {   mem_wmask_1_2[3] ? mem_wdata_1_2[31:24] : 8'b0,
-                mem_wmask_1_2[2] ? mem_wdata_1_2[23:16] : 8'b0,
-                mem_wmask_1_2[1] ? mem_wdata_1_2[15:8] : 8'b0,
-                mem_wmask_1_2[0] ? mem_wdata_1_2[7:0] : 8'b0
-            }
-        :
-            {   mem_wmask_1_1[3] ? mem_wdata_1_1[31:24] : 8'b0,
-                mem_wmask_1_1[2] ? mem_wdata_1_1[23:16] : 8'b0,
-                mem_wmask_1_1[1] ? mem_wdata_1_1[15:8] : 8'b0,
-                mem_wmask_1_1[0] ? mem_wdata_1_1[7:0] : 8'b0
+    assign mem_w_data_2 = {
+                mem_wmask_2[3] ? mem_wdata_2[31:24] : 8'b0,
+                mem_wmask_2[2] ? mem_wdata_2[23:16] : 8'b0,
+                mem_wmask_2[1] ? mem_wdata_2[15:8] : 8'b0,
+                mem_wmask_2[0] ? mem_wdata_2[7:0] : 8'b0
             };
-
-
-    rvfi_instr_t [1:0] rvfi_2;
-
-    logic valid_2_1;
-    logic valid_2_2;
-    logic [31:0] insn_2_1;
-    logic [31:0] insn_2_2;
-    logic [4:0] rd_2_1;
-    logic [4:0] rd_2_2;
-    logic [4:0] rs1_2_1;
-    logic [4:0] rs1_2_2;
-    logic [4:0] rs2_2_1;
-    logic [4:0] rs2_2_2;
-    logic [31:0] rs1_rdata_2_1;
-    logic [31:0] rs1_rdata_2_2;
-    logic [31:0] rs2_rdata_2_1;
-    logic [31:0] rs2_rdata_2_2;
-    logic [31:0] rd_wdata_2_1;
-    logic [31:0] rd_wdata_2_2;
-    logic [31:0] mem_addr_2_1;
-    logic [31:0] mem_addr_2_2;
-    logic [31:0] mem_rdata_2_1;
-    logic [31:0] mem_rdata_2_2;
-    logic [31:0] mem_wdata_2_1;
-    logic [31:0] mem_wdata_2_2;
-    logic [3:0]  mem_rmask_2_1;
-    logic [3:0]  mem_rmask_2_2;
-    logic [3:0]  mem_wmask_2_1;
-    logic [3:0]  mem_wmask_2_2;
-
-    rvfi_unwrap rvfi_unwrap_2_1 (
-        .rvfi_instr_i (rvfi_2[0]),
-        .valid_o(valid_2_1),
-        .insn_o(insn_2_1),
-        .rs1_addr_o(rs1_2_1),
-        .rs2_addr_o(rs2_2_1),
-        .rs1_rdata_o(rs1_rdata_2_1),
-        .rs2_rdata_o(rs2_rdata_2_1),
-        .rd_addr_o(rd_2_1),
-        .rd_wdata_o(rd_wdata_2_1),
-        .mem_addr_o(mem_addr_2_1),
-        .mem_rdata_o(mem_rdata_2_1),
-        .mem_wdata_o(mem_wdata_2_1),
-        .pc_rdata_o(pc_rdata_2_1),
-        .mem_rmask_o(mem_rmask_2_1),
-        .mem_wmask_o(mem_wmask_2_1),
-    );
-
-    rvfi_unwrap rvfi_unwrap_2_2 (
-        .rvfi_instr_i (rvfi_2[1]),
-        .valid_o(valid_2_2),
-        .insn_o(insn_2_2),
-        .rs1_addr_o(rs1_2_2),
-        .rs2_addr_o(rs2_2_2),
-        .rs1_rdata_o(rs1_rdata_2_2),
-        .rs2_rdata_o(rs2_rdata_2_2),
-        .rd_addr_o(rd_2_2),
-        .rd_wdata_o(rd_wdata_2_2),
-        .mem_addr_o(mem_addr_2_2),
-        .mem_rdata_o(mem_rdata_2_2),
-        .mem_wdata_o(mem_wdata_2_2),
-        .pc_rdata_o(pc_rdata_2_2),
-        .mem_rmask_o(mem_rmask_2_2),
-        .mem_wmask_o(mem_wmask_2_2),
-    );
-
-    assign retire_instr_2 = sel_2 ? insn_2_2 : insn_2_1;
-    assign rs1_2 = sel_2 ? rs1_2_2 : rs1_2_1;
-    assign rs2_2 = sel_2 ? rs2_2_2 : rs2_2_1;
-    assign rd_2 = sel_2 ? rd_2_2 : rd_2_1;
-    assign reg_rs1_2 = sel_2 ? rs1_rdata_2_2 : rs1_rdata_2_1;
-    assign reg_rs2_2 = sel_2 ? rs2_rdata_2_2 : rs2_rdata_2_1;
-    assign reg_rd_2 = sel_2 ? rd_wdata_2_2 : rd_wdata_2_1;
-    assign mem_addr_2 = sel_2 ? mem_addr_2_2 : mem_addr_2_1;
-    assign mem_r_data_2 =
-        sel_2 ?
-            {   mem_rmask_2_2[3] ? mem_rdata_2_2[31:24] : 8'b0,
-                mem_rmask_2_2[2] ? mem_rdata_2_2[23:16] : 8'b0,
-                mem_rmask_2_2[1] ? mem_rdata_2_2[15:8] : 8'b0,
-                mem_rmask_2_2[0] ? mem_rdata_2_2[7:0] : 8'b0
-            }
-        :
-            {   mem_rmask_2_1[3] ? mem_rdata_2_1[31:24] : 8'b0,
-                mem_rmask_2_1[2] ? mem_rdata_2_1[23:16] : 8'b0,
-                mem_rmask_2_1[1] ? mem_rdata_2_1[15:8] : 8'b0,
-                mem_rmask_2_1[0] ? mem_rdata_2_1[7:0] : 8'b0
-            };
-    assign mem_w_data_2 =
-        sel_2 ?
-            {   mem_wmask_2_2[3] ? mem_wdata_2_2[31:24] : 8'b0,
-                mem_wmask_2_2[2] ? mem_wdata_2_2[23:16] : 8'b0,
-                mem_wmask_2_2[1] ? mem_wdata_2_2[15:8] : 8'b0,
-                mem_wmask_2_2[0] ? mem_wdata_2_2[7:0] : 8'b0
-            }
-        :
-            {   mem_wmask_2_1[3] ? mem_wdata_2_1[31:24] : 8'b0,
-                mem_wmask_2_1[2] ? mem_wdata_2_1[23:16] : 8'b0,
-                mem_wmask_2_1[1] ? mem_wdata_2_1[15:8] : 8'b0,
-                mem_wmask_2_1[0] ? mem_wdata_2_1[7:0] : 8'b0
-            };
-`endif
 
     mem #(
-        .ID                     (1),
+        .ID                     (1)
     ) mem_1 (
         .clk_i                  (clock_1),
         .enable_i               (enable_1),
@@ -390,11 +258,11 @@ module top (
         .addr_i                 (addr_1),
         .be_i                   (be_1),
         .data_i                 (data_w_1),
-        .data_o                 (data_r_1),
+        .data_o                 (data_r_1)
     );
 
     mem #(
-        .ID                     (2),
+        .ID                     (2)
     ) mem_2 (
         .clk_i                  (clock_2),
         .enable_i               (enable_2),
@@ -403,45 +271,45 @@ module top (
         .addr_i                 (addr_2),
         .be_i                   (be_2),
         .data_i                 (data_w_2),
-        .data_o                 (data_r_2),
+        .data_o                 (data_r_2)
     );
 
-    ariane_axi::req_t axi_req_1;
-    ariane_axi::resp_t axi_resp_1;
-    ariane_axi::req_t axi_req_2;
-    ariane_axi::resp_t axi_resp_2;
+    cva6_axi_pkg::noc_req_t axi_req_1;
+    cva6_axi_pkg::noc_resp_t axi_resp_1;
+    cva6_axi_pkg::noc_req_t axi_req_2;
+    cva6_axi_pkg::noc_resp_t axi_resp_2;
 
     AXI_BUS #(
-        .AXI_ADDR_WIDTH         (64), 
-        .AXI_DATA_WIDTH         (64), 
-        .AXI_ID_WIDTH           (4), 
-        .AXI_USER_WIDTH         (2),
+        .AXI_ADDR_WIDTH         (64),
+        .AXI_DATA_WIDTH         (64),
+        .AXI_ID_WIDTH           (4),
+        .AXI_USER_WIDTH         (2)
     ) axi_bus_1 ();
 
     axi_converter axi_converter_1 (
         .axi_req_i              (axi_req_1),
         .axi_resp_o             (axi_resp_1),
-        .master                 (axi_bus_1.Master),
+        .master                 (axi_bus_1.Master)
     );
 
     AXI_BUS #(
-        .AXI_ADDR_WIDTH         (64), 
-        .AXI_DATA_WIDTH         (64), 
-        .AXI_ID_WIDTH           (4), 
-        .AXI_USER_WIDTH         (2),
+        .AXI_ADDR_WIDTH         (64),
+        .AXI_DATA_WIDTH         (64),
+        .AXI_ID_WIDTH           (4),
+        .AXI_USER_WIDTH         (2)
     ) axi_bus_2 ();
 
     axi_converter axi_converter_2 (
         .axi_req_i              (axi_req_2),
         .axi_resp_o             (axi_resp_2),
-        .master                 (axi_bus_2.Master),
+        .master                 (axi_bus_2.Master)
     );
 
     axi2mem #(
         .AXI_ID_WIDTH           (4),
         .AXI_ADDR_WIDTH         (64),
         .AXI_DATA_WIDTH         (64),
-        .AXI_USER_WIDTH         (2),
+        .AXI_USER_WIDTH         (2)
     ) axi2mem_1 (
         .clk_i                  (clock_1),
         .rst_ni                 (reset_1),
@@ -451,14 +319,14 @@ module top (
         .addr_o                 (addr_1),
         .be_o                   (be_1),
         .data_o                 (data_w_1),
-        .data_i                 (data_r_1),
+        .data_i                 (data_r_1)
     );
 
     axi2mem #(
         .AXI_ID_WIDTH           (4),
         .AXI_ADDR_WIDTH         (64),
         .AXI_DATA_WIDTH         (64),
-        .AXI_USER_WIDTH         (2),
+        .AXI_USER_WIDTH         (2)
     ) axi2mem_2 (
         .clk_i                  (clock_2),
         .rst_ni                 (reset_2),
@@ -468,12 +336,10 @@ module top (
         .addr_o                 (addr_2),
         .be_o                   (be_2),
         .data_o                 (data_w_2),
-        .data_i                 (data_r_2),
+        .data_i                 (data_r_2)
     );
 
-    ariane #(
-        .ArianeCfg              (ariane_pkg::ArianeDefaultConfig),
-    ) core_1 (
+    cva6 core_1 (
         .clk_i                  (clock_1),
         .rst_ni                 (reset_1),
         .boot_addr_i            (32'h1000), // TODO
@@ -482,18 +348,14 @@ module top (
         .ipi_i                  (1'b0),
         .time_irq_i             (1'b0),
         .debug_req_i            (1'b0),
-    `ifdef RVFI_TRACE
         .rvfi_o                 (rvfi_1),
-    `endif
-        .axi_req_o              (axi_req_1),
-        .axi_resp_i             (axi_resp_1),
+        .noc_req_o              (axi_req_1),
+        .noc_resp_i             (axi_resp_1),
         .enable_issue_i         (enable_1),
-        .issue_o                (issue_1),
+        .issue_o                (issue_1)
     );
 
-    ariane #(
-        .ArianeCfg              (ariane_pkg::ArianeDefaultConfig),
-    ) core_2 (
+    cva6 core_2 (
         .clk_i                  (clock_2),
         .rst_ni                 (reset_2),
         .boot_addr_i            (32'h1000), // TODO
@@ -502,22 +364,48 @@ module top (
         .ipi_i                  (1'b0),
         .time_irq_i             (1'b0),
         .debug_req_i            (1'b0),
-    `ifdef RVFI_TRACE
         .rvfi_o                 (rvfi_2),
-    `endif
-        .axi_req_o              (axi_req_2),
-        .axi_resp_i             (axi_resp_2),
+        .noc_req_o              (axi_req_2),
+        .noc_resp_i             (axi_resp_2),
         .enable_issue_i         (enable_2),
-        .issue_o                (issue_2),
+        .issue_o                (issue_2)
     );
 
     atk atk (
         .clk_i(clock),
         .atk_observation_1_i    (clock_1),
         .atk_observation_2_i    (clock_2),
-        .atk_equiv_o            (atk_equiv),
+        .atk_equiv_o            (atk_equiv)
     );
 
+    assign mem_r_data_1 = {
+            mem_rmask_1[3] ? mem_rdata_1[31:24] : 8'b0,
+            mem_rmask_1[2] ? mem_rdata_1[23:16] : 8'b0,
+            mem_rmask_1[1] ? mem_rdata_1[15:8] : 8'b0,
+            mem_rmask_1[0] ? mem_rdata_1[7:0] : 8'b0
+        };
+    assign mem_w_data_1 = {
+            mem_wmask_1[3] ? mem_wdata_1[31:24] : 8'b0,
+            mem_wmask_1[2] ? mem_wdata_1[23:16] : 8'b0,
+            mem_wmask_1[1] ? mem_wdata_1[15:8] : 8'b0,
+            mem_wmask_1[0] ? mem_wdata_1[7:0] : 8'b0
+        };
+
+    assign mem_r_data_2 = {
+            mem_rmask_2[3] ? mem_rdata_2[31:24] : 8'b0,
+            mem_rmask_2[2] ? mem_rdata_2[23:16] : 8'b0,
+            mem_rmask_2[1] ? mem_rdata_2[15:8] : 8'b0,
+            mem_rmask_2[0] ? mem_rdata_2[7:0] : 8'b0
+        };
+    assign mem_w_data_2 = {
+            mem_wmask_2[3] ? mem_wdata_2[31:24] : 8'b0,
+            mem_wmask_2[2] ? mem_wdata_2[23:16] : 8'b0,
+            mem_wmask_2[1] ? mem_wdata_2[15:8] : 8'b0,
+            mem_wmask_2[0] ? mem_wdata_2[7:0] : 8'b0
+        };
+
+    assign mem_addr_real_1 = (mem_rmask_1 == 0 && mem_wmask_1 == 0) ? 0 : mem_addr_1;
+    assign mem_addr_real_2 = (mem_rmask_2 == 0 && mem_wmask_2 == 0) ? 0 : mem_addr_2;
     ctr ctr (
         .clk_i                  (clock),
         .retire_i               (retire),
@@ -535,30 +423,28 @@ module top (
         .reg_rs2_2              (reg_rs2_2),
         .reg_rd_1               (reg_rd_1),
         .reg_rd_2               (reg_rd_2),
-        .mem_addr_1             (mem_addr_1),
-        .mem_addr_2             (mem_addr_2),
+        .mem_addr_1             (mem_addr_real_1),
+        .mem_addr_2             (mem_addr_real_2),
         .mem_r_data_1           (mem_r_data_1),
         .mem_r_data_2           (mem_r_data_2),
+        .mem_r_mask_1           (mem_rmask_1),
+        .mem_r_mask_2           (mem_rmask_2),
         .mem_w_data_1           (mem_w_data_1),
         .mem_w_data_2           (mem_w_data_2),
-        .ctr_equiv_o            (ctr_equiv),
+        .mem_w_mask_1           (mem_wmask_1),
+        .mem_w_mask_2           (mem_wmask_2),
+        .new_pc_1               (new_pc_1),
+        .new_pc_2               (new_pc_2),
+        .ctr_equiv_o            (ctr_equiv)
     );
 
     clk_sync clk_sync (
         .clk_i                  (clock),
-        .valid_1_1_i            (valid_1_1),
-        .valid_1_2_i            (valid_1_2),
-        .valid_2_1_i            (valid_2_1),
-        .valid_2_2_i            (valid_2_2),
-        .pc_rdata_1_1_i         (pc_rdata_1_1),
-        .pc_rdata_1_2_i         (pc_rdata_1_2),
-        .pc_rdata_2_1_i         (pc_rdata_2_1),
-        .pc_rdata_2_2_i         (pc_rdata_1_2),
+        .retire_1_i             (retire_1),
+        .retire_2_i             (retire_2),
         .clk_1_o                (clock_1),
         .clk_2_o                (clock_2),
-        .sel_1_o                (sel_1),
-        .sel_2_o                (sel_2),
-        .retire_o               (retire),
+        .retire_o               (retire)
     );
 
     control control (
@@ -568,7 +454,7 @@ module top (
         .fetch_2_i              (issue_2),
         .enable_1_o             (enable_1),
         .enable_2_o             (enable_2),
-        .finished_o             (finished),
+        .finished_o             (finished)
     );
 
 //    always @(posedge clk) begin
@@ -580,9 +466,9 @@ module top (
 endmodule
 
 module axi_converter (
-    input ariane_axi::req_t axi_req_i,
-    output ariane_axi::resp_t axi_resp_o,
-    AXI_BUS.Master master,
+    input cva6_axi_pkg::noc_req_t axi_req_i,
+    output cva6_axi_pkg::noc_resp_t axi_resp_o,
+    AXI_BUS.Master master
 );
     // Request
     assign master.aw_id = axi_req_i.aw.id;
@@ -597,18 +483,18 @@ module axi_converter (
     assign master.aw_region = axi_req_i.aw.region;
     assign master.aw_atop = axi_req_i.aw.atop;
     assign master.aw_user = axi_req_i.aw.user;
-    
+
     assign master.aw_valid = axi_req_i.aw_valid;
 
     assign master.w_data = axi_req_i.w.data;
     assign master.w_strb = axi_req_i.w.strb;
     assign master.w_last = axi_req_i.w.last;
     assign master.w_user = axi_req_i.w.user;
-    
+
     assign master.w_valid = axi_req_i.w_valid;
-    
+
     assign master.b_ready = axi_req_i.b_ready;
-    
+
     assign master.ar_id = axi_req_i.ar.id;
     assign master.ar_addr = axi_req_i.ar.addr;
     assign master.ar_len = axi_req_i.ar.len;
@@ -620,11 +506,11 @@ module axi_converter (
     assign master.ar_qos = axi_req_i.ar.qos;
     assign master.ar_region = axi_req_i.ar.region;
     assign master.ar_user = axi_req_i.ar.user;
-    
+
     assign master.ar_valid = axi_req_i.ar_valid;
-    
+
     assign master.r_ready = axi_req_i.r_ready;
-    
+
     // Response
     assign axi_resp_o.aw_ready = master.aw_ready;
 
@@ -637,7 +523,7 @@ module axi_converter (
     assign axi_resp_o.b.id = master.b_id;
     assign axi_resp_o.b.resp = master.b_resp;
     assign axi_resp_o.b.user = master.b_user;
-    
+
     assign axi_resp_o.r_valid = master.r_valid;
 
     assign axi_resp_o.r.id = master.r_id;
@@ -897,19 +783,6 @@ module axi2mem #(
         endcase
     end
 
-    `ifndef SYNTHESIS
-    `ifndef VERILATOR
-    // assert that only full data lane transfers allowed
-    // assert property (
-    //   @(posedge clk_i) slave.aw_valid |-> (slave.aw_size == LOG_NR_BYTES)) else $fatal ("Only full data lane transfers allowed");
-    //   assert property (
-    //   @(posedge clk_i) slave.ar_valid |-> (slave.ar_size == LOG_NR_BYTES)) else $fatal ("Only full data lane transfers allowed");
-    // assert property (
-    //   @(posedge clk_i) slave.aw_valid |-> (slave.ar_addr[LOG_NR_BYTES-1:0] == '0)) else $fatal ("Unaligned accesses are not allowed at the moment");
-    // assert property (
-    //   @(posedge clk_i) slave.ar_valid |-> (slave.aw_addr[LOG_NR_BYTES-1:0] == '0)) else $fatal ("Unaligned accesses are not allowed at the moment");
-    `endif
-    `endif
     // --------------
     // Registers
     // --------------

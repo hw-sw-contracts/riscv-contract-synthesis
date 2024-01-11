@@ -1,0 +1,214 @@
+From bb9907cb07eb4e93416144f30dce4f0f7b865f16 Mon Sep 17 00:00:00 2001
+From: Gideon Mohr <gideon@contractgen>
+Date: Mon, 18 Dec 2023 11:03:23 +0100
+Subject: [PATCH] ibex
+
+---
+ rtl/ibex_core.sv             | 39 +++++++++++++++++++++++++++++++++---
+ rtl/ibex_decoder.sv          |  2 +-
+ rtl/ibex_ex_block.sv         |  4 ++++
+ rtl/ibex_register_file_ff.sv |  9 ++++++++-
+ rtl/ibex_wb_stage.sv         | 15 +++++++++++++-
+ 5 files changed, 63 insertions(+), 6 deletions(-)
+
+diff --git a/rtl/ibex_core.sv b/rtl/ibex_core.sv
+index 2858a66c..a45b5f31 100644
+--- a/rtl/ibex_core.sv
++++ b/rtl/ibex_core.sv
+@@ -110,7 +110,14 @@ module ibex_core #(
+     input  logic        fetch_enable_i,
+     output logic        alert_minor_o,
+     output logic        alert_major_o,
+-    output logic        core_sleep_o
++    output logic        core_sleep_o,
++
++`ifdef CONTRACT
++    output logic        fetch_o,
++    output logic        retire_o,
++    output logic [31:0] retire_instr_o,
++    output logic [(2**(RV32E ? 4 : 5))-1:0][RegFileDataWidth-1:0] regfile_o,
++`endif
+ );
+ 
+   import ibex_pkg::*;
+@@ -200,6 +207,9 @@ module ibex_core #(
+   logic [31:0] rf_wdata_lsu;
+   logic        rf_we_wb;
+   logic        rf_we_lsu;
++`ifdef CONTRACT
++  logic [(2**(RV32E ? 4 : 5))-1:0][RegFileDataWidth-1:0] rf_regfile;
++`endif
+ 
+   logic [4:0]  rf_waddr_id;
+   logic [31:0] rf_wdata_id;
+@@ -309,6 +319,9 @@ module ibex_core #(
+   // used by performance counters and RVFI
+   logic        instr_id_done;
+   logic        instr_done_wb;
++`ifdef CONTRACT
++  logic [31:0] instr_done_rdata_wb;
++`endif
+ 
+   logic        perf_instr_ret_wb;
+   logic        perf_instr_ret_compressed_wb;
+@@ -755,6 +768,9 @@ module ibex_core #(
+     .en_wb_i                        ( en_wb                        ),
+     .instr_type_wb_i                ( instr_type_wb                ),
+     .pc_id_i                        ( pc_id                        ),
++`ifdef CONTRACT
++    .instr_rdata_id_i               ( instr_rdata_id               ),
++`endif
+     .instr_is_compressed_id_i       ( instr_is_compressed_id       ),
+     .instr_perf_count_id_i          ( instr_perf_count_id          ),
+ 
+@@ -782,7 +798,10 @@ module ibex_core #(
+     .lsu_resp_valid_i               ( lsu_resp_valid               ),
+     .lsu_resp_err_i                 ( lsu_resp_err                 ),
+ 
+-    .instr_done_wb_o                ( instr_done_wb                )
++    .instr_done_wb_o                ( instr_done_wb                ),
++`ifdef CONTRACT
++    .instr_done_rdata_wb_o          ( instr_done_rdata_wb          ),
++`endif
+   );
+ 
+   ///////////////////////
+@@ -862,7 +881,10 @@ module ibex_core #(
+         .rdata_b_o        ( rf_rdata_b_ecc  ),
+         .waddr_a_i        ( rf_waddr_wb     ),
+         .wdata_a_i        ( rf_wdata_wb_ecc ),
+-        .we_a_i           ( rf_we_wb        )
++        .we_a_i           ( rf_we_wb        ),
++`ifdef CONTRACT
++        .regfile_o        ( rf_regfile      ),
++`endif
+     );
+   end else if (RegFile == RegFileFPGA) begin : gen_regfile_fpga
+     ibex_register_file_fpga #(
+@@ -1471,4 +1493,15 @@ module ibex_core #(
+   // Certain parameter combinations are not supported
+   `ASSERT_INIT(IllegalParamSecure, !(SecureIbex && (RV32M == RV32MNone)))
+ 
++`ifdef CONTRACT
++  logic granted = 0;
++  always @(posedge clk) begin
++    granted <= instr_gnt_i;
++  end
++  assign fetch_o = granted;
++  assign retire_o = instr_done_wb;
++  assign retire_instr_o = instr_done_rdata_wb;
++  assign regfile_o = rf_regfile;
++`endif
++
+ endmodule
+diff --git a/rtl/ibex_decoder.sv b/rtl/ibex_decoder.sv
+index b61520ed..b33c6c68 100644
+--- a/rtl/ibex_decoder.sv
++++ b/rtl/ibex_decoder.sv
+@@ -214,7 +214,7 @@ module ibex_decoder #(
+     csr_op                = CSR_OP_READ;
+ 
+     data_we_o             = 1'b0;
+-    data_type_o           = 2'b00;
++    data_type_o           = 2'b11;
+     data_sign_extension_o = 1'b0;
+     data_req_o            = 1'b0;
+ 
+diff --git a/rtl/ibex_ex_block.sv b/rtl/ibex_ex_block.sv
+index 62e03964..2e05aa7d 100644
+--- a/rtl/ibex_ex_block.sv
++++ b/rtl/ibex_ex_block.sv
+@@ -189,6 +189,10 @@ module ibex_ex_block #(
+         .valid_o            ( multdiv_valid         ),
+         .multdiv_result_o   ( multdiv_result        )
+     );
++  end else begin : gen_multdiv_none
++    // Fix warnings about uninitialized wires
++    assign multdiv_alu_operand_a = 33'b0;
++    assign multdiv_alu_operand_b = 33'b0;
+   end
+ 
+   // Multiplier/divider may require multiple cycles. The ALU output is valid in the same cycle
+diff --git a/rtl/ibex_register_file_ff.sv b/rtl/ibex_register_file_ff.sv
+index 3e887b12..8a4827ef 100644
+--- a/rtl/ibex_register_file_ff.sv
++++ b/rtl/ibex_register_file_ff.sv
+@@ -34,8 +34,11 @@ module ibex_register_file_ff #(
+     // Write port W1
+     input  logic [4:0]           waddr_a_i,
+     input  logic [DataWidth-1:0] wdata_a_i,
+-    input  logic                 we_a_i
++    input  logic                 we_a_i,
+ 
++`ifdef CONTRACT
++    output logic [(2**(RV32E ? 4 : 5))-1:0][DataWidth-1:0] regfile_o,
++`endif
+ );
+ 
+   localparam int unsigned ADDR_WIDTH = RV32E ? 4 : 5;
+@@ -99,4 +102,8 @@ module ibex_register_file_ff #(
+   logic unused_test_en;
+   assign unused_test_en = test_en_i;
+ 
++`ifdef CONTRACT
++  assign regfile_o = rf_reg;
++`endif
++
+ endmodule
+diff --git a/rtl/ibex_wb_stage.sv b/rtl/ibex_wb_stage.sv
+index 7299ad11..94b8f653 100644
+--- a/rtl/ibex_wb_stage.sv
++++ b/rtl/ibex_wb_stage.sv
+@@ -22,6 +22,9 @@ module ibex_wb_stage #(
+   input  logic                     en_wb_i,
+   input  ibex_pkg::wb_instr_type_e instr_type_wb_i,
+   input  logic [31:0]              pc_id_i,
++`ifdef CONTRACT
++  input  logic [31:0]              instr_rdata_id_i,
++`endif
+   input  logic                     instr_is_compressed_id_i,
+   input  logic                     instr_perf_count_id_i,
+ 
+@@ -49,7 +52,10 @@ module ibex_wb_stage #(
+   input logic                      lsu_resp_valid_i,
+   input logic                      lsu_resp_err_i,
+ 
+-  output logic                     instr_done_wb_o
++  output logic                     instr_done_wb_o,
++`ifdef CONTRACT
++  output logic [31:0]              instr_done_rdata_wb_o,
++`endif
+ );
+ 
+   import ibex_pkg::*;
+@@ -68,6 +74,9 @@ module ibex_wb_stage #(
+ 
+     logic           wb_valid_q;
+     logic [31:0]    wb_pc_q;
++`ifdef CONTRACT
++    logic [31:0]    wb_instr_q;
++`endif
+     logic           wb_compressed_q;
+     logic           wb_count_q;
+     wb_instr_type_e wb_instr_type_q;
+@@ -98,6 +107,9 @@ module ibex_wb_stage #(
+         rf_wdata_wb_q   <= rf_wdata_id_i;
+         wb_instr_type_q <= instr_type_wb_i;
+         wb_pc_q         <= pc_id_i;
++`ifdef CONTRACT
++        wb_instr_q      <= instr_rdata_id_i;
++`endif
+         wb_compressed_q <= instr_is_compressed_id_i;
+         wb_count_q      <= instr_perf_count_id_i;
+       end
+@@ -117,6 +129,7 @@ module ibex_wb_stage #(
+     assign outstanding_store_wb_o = wb_valid_q & (wb_instr_type_q == WB_INSTR_STORE);
+ 
+     assign pc_wb_o = wb_pc_q;
++    assign instr_done_rdata_wb_o = wb_instr_q;
+ 
+     assign instr_done_wb_o = wb_valid_q & wb_done;
+ 
+-- 
+2.34.1
+

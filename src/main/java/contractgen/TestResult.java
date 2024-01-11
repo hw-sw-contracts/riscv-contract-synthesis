@@ -8,14 +8,23 @@ import java.util.Set;
  */
 public abstract class TestResult {
 
-    protected final Set<Observation> observations;
+    /**
+     * A set of observations that would make the execution distinguishable.
+     */
+    protected Set<Observation> observations;
+    /**
+     * Whether the adversary was able to distinguish the executions.
+     */
     private final boolean adversaryDistinguishable;
+    /**
+     * An id of the test result.
+     */
     private final int index;
 
     /**
-     * @param observations              The observations that would make the executions distinguishable.
-     * @param adversaryDistinguishable  Whether the adversary was able to distinguish the executions.
-     * @param index                     The index of the relevant test case for further reference.
+     * @param observations             The observations that would make the executions distinguishable.
+     * @param adversaryDistinguishable Whether the adversary was able to distinguish the executions.
+     * @param index                    The index of the relevant test case for further reference.
      */
     public TestResult(Set<Observation> observations, boolean adversaryDistinguishable, int index) {
         this.observations = observations;
@@ -33,6 +42,13 @@ public abstract class TestResult {
      */
     public boolean isAdversaryDistinguishable() {
         return adversaryDistinguishable;
+    }
+
+    /**
+     * @return Whether the adversary was able to distinguish the executions.
+     */
+    public boolean isAdversaryIndistinguishable() {
+        return !adversaryDistinguishable;
     }
 
     @Override

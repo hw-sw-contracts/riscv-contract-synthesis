@@ -17,7 +17,7 @@ public class SimpleSMTGenerator extends Generator {
 
     @Override
     public Contract generate() {
-        for (TestCase testCase: MARCH.getISA().getTestCases().getTestCaseList()) {
+        MARCH.getISA().getTestCases().getIterator(0).forEachRemaining(testCase -> {
             MARCH.generateSources(testCase, null);
             String coverTrace = MARCH.runCover(150);
             int steps = MARCH.extractSteps(coverTrace);
@@ -28,7 +28,7 @@ public class SimpleSMTGenerator extends Generator {
                 MARCH.getISA().getContract().add(ctx.right());
                 MARCH.getISA().getContract().update(false);
             }
-        }
+        });
         return MARCH.getISA().getContract();
     }
 }

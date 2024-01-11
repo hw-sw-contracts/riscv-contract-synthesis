@@ -2,7 +2,7 @@ module atk(
     input logic clk_i,
     input logic atk_observation_1_i,
     input logic atk_observation_2_i,
-    output logic atk_equiv_o,
+    output logic atk_equiv_o
 );
 
     initial atk_equiv_o <= 1;

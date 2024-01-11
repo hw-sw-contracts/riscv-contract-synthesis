@@ -1,10 +1,10 @@
 `define NO_OP     32'h00000013
 `define MAX_INSTR 128
 `define COUNT 32
-`define BOOT_ADDR     64'h100001000
+`define BOOT_ADDR     64'h00001000
 
 module mem #(
-    parameter int unsigned        ID   = 0,
+    parameter int unsigned        ID   = 0
 ) (
     input logic clk_i,
     input logic enable_i,
@@ -13,7 +13,7 @@ module mem #(
     input logic [63:0] addr_i,
     input logic [3:0] be_i,
     input logic [63:0] data_i,
-    output logic [63:0] data_o,
+    output logic [63:0] data_o
 );
     (* nomem2reg *)
     logic [31:0] instr_mem   [(`MAX_INSTR - 1):0];
@@ -97,7 +97,7 @@ module mem #(
                         has_data_2 = 1;
                     end
                 end
-            data_o <= {has_data_1 ? data_1 : instr_1, has_data_2 ? data_2 : instr_2};
+            data_o <= {has_data_2 ? data_2 : instr_2, has_data_1 ? data_1 : instr_1};
             if (we_i) begin
                 if (be_i[0]) begin
                     for (i = 1; i < `COUNT; i = i + 1) begin

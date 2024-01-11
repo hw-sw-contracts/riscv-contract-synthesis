@@ -9,10 +9,24 @@ import java.util.stream.Collectors;
  */
 public class Module {
 
+    /**
+     * The name of the module.
+     */
     private final String name;
 
+    /**
+     * The parent module or null if toplevel.
+     */
     private final Module parent;
+
+    /**
+     * The modules children identified by their name.
+     */
     private final Map<String, Module> children = new HashMap<>();
+
+    /**
+     * The set of wires in this module identified by their name.
+     */
     private final Map<String, Wire> wireSet = new HashMap<>();
 
     /**
@@ -39,8 +53,8 @@ public class Module {
     }
 
     /**
-     * @param name  The name of the wire.
-     * @return      The wire.
+     * @param name The name of the wire.
+     * @return The wire.
      */
     public Wire getWire(String name) {
         return wireSet.get(name);
@@ -54,8 +68,8 @@ public class Module {
     }
 
     /**
-     * @param name  The name of the child.
-     * @return      The child.
+     * @param name The name of the child.
+     * @return The child.
      */
     public Module getChild(String name) {
         return this.children.getOrDefault(name, null);

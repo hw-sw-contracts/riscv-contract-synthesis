@@ -16,10 +16,19 @@ import java.util.Random;
  */
 public class RandomTests extends TestCases {
 
+    /**
+     * @param count The total number of tests to be generated.
+     * @param seed  A seed for pseudo-random generation.
+     */
     protected RandomTests(int count, long seed) {
         super(generateRandomTestCases(count, seed));
     }
 
+    /**
+     * @param count The total number of tests to be generated.
+     * @param seed  A seed for pseudo-random generation.
+     * @return A set of test cases.
+     */
     private static List<TestCase> generateRandomTestCases(int count, long seed) {
         Random r = new Random(seed);
         List<TestCase> testcases = new ArrayList<>(count);
@@ -30,7 +39,7 @@ public class RandomTests extends TestCases {
             for (int j = 0; j < instrcount; j++) {
                 switch (r.nextInt(5)) {
 
-                    case 0 ->  {
+                    case 0 -> {
                         p1.add(SimpleInstruction.NO_OP());
                         p2.add(SimpleInstruction.NO_OP());
                     }

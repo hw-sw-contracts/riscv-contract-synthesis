@@ -10,7 +10,8 @@ public interface Updater {
 
     /**
      * @param testResults The test results to be considered in the computation.
-     * @return            The computed contract.
+     * @param oldContract The old contract to be used as hint.
+     * @return The computed contract.
      */
-    Set<Observation> update(List<TestResult> testResults);
+    Set<Observation> update(List<TestResult> testResults, Set<Observation> oldContract);
 }

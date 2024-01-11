@@ -27,7 +27,7 @@ module data_mem (
     integer j;
     always @(posedge clk_i) begin
         if (data_req_i == 1'b1) begin
-            temp = data_addr_i;
+            temp = data_addr_i % 32'h1000;
             for (i = 0; i < `COUNT; i = i + 1) begin
                 if (data_be_i[0] && (data_addr_i + 0) == last_addr[i]) begin
                     temp[(0 * 8) + 7:(0 * 8)] = last_values[i];

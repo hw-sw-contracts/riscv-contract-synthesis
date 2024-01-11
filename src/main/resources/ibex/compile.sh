@@ -3,6 +3,9 @@ export LR_VERIF_OUT_DIR=$2
 rm -r "$LR_VERIF_OUT_DIR"
 mkdir -p "$LR_VERIF_OUT_DIR"
 
+cd core
+patch -p1 < ../ibex.patch
+cd ..
 
 #-------------------------------------------------------------------------
 # use sv2v to convert all SystemVerilog files to Verilog

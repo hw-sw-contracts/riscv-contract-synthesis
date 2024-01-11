@@ -8,7 +8,7 @@ public interface Program {
     /**
      * Prints symbolic variables for the bounded model check in Verilog syntax.
      *
-     * @return All symbolic variables in Verilog sytax.
+     * @return All symbolic variables in Verilog syntax.
      */
     String printSymbolic();
 

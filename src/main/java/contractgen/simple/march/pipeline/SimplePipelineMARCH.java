@@ -79,6 +79,11 @@ public class SimplePipelineMARCH extends SimpleMARCH {
         return new Pair<>(new SimpleTestResult(differences_1, true, testCase.getIndex()), new SimpleTestResult(differences_2, true, testCase.getIndex()));
     }
 
+    /**
+     * @param ctx      The trace
+     * @param testCase The test case
+     * @return The two instructions evaluated while the attacker was able to distinguish the executions.
+     */
     private Pair<Pair<Instruction, Integer>, Pair<Instruction, Integer>> findInstructionsPipeline(VcdFile ctx, TestCase testCase) {
         Integer violation = ctx.getTop().getWire("atk_equiv").getLastChangeTime();
         System.out.println("Violation at " + violation);
@@ -87,7 +92,7 @@ public class SimplePipelineMARCH extends SimpleMARCH {
         int retire_count = Integer.parseInt(ctx.getTop().getChild("control").getWire("retire_count").getValueAt(violation), 2);
         int fetch = Integer.max(fetch_1_count, fetch_2_count);
         int responsible = -1;
-        for (int i = retire_count + 1 ; i <= fetch; i++) {
+        for (int i = retire_count + 1; i <= fetch; i++) {
             generateSources(testCase, i);
             String path = "verif_out/count_" + i;
             generateSBY(50, path);
@@ -101,7 +106,7 @@ public class SimplePipelineMARCH extends SimpleMARCH {
         assert responsible != -1;
         Integer fetch_1 = ctx.getTop().getChild("control").getWire("fetch_1_count").getFirstTimeValue(Integer.toBinaryString(responsible));
         Integer fetch_2 = ctx.getTop().getChild("control").getWire("fetch_2_count").getFirstTimeValue(Integer.toBinaryString(responsible));
-        System.out.println("Fetch of instructions at " + fetch_1 +" and " + fetch_2);
+        System.out.println("Fetch of instructions at " + fetch_1 + " and " + fetch_2);
         String instr_1_b = ctx.getTop().getChild("core_1").getWire("instr_ex").getValueAt(fetch_1);
         System.out.println("Instr 1: " + instr_1_b);
         Instruction instr_1 = SimpleInstruction.parseBinaryString(instr_1_b);

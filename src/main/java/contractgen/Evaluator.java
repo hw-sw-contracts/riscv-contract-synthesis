@@ -12,7 +12,13 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class Evaluator {
 
+    /**
+     * The microarchitecture.
+     */
     private final MARCH MARCH;
+    /**
+     * The total number of threads.
+     */
     private final int COUNT;
 
     /**
@@ -45,7 +51,7 @@ public class Evaluator {
         AtomicInteger timeout = new AtomicInteger(0);
         List<Thread> runners = new ArrayList<>();
         for (int i = 0; i < COUNT; i++) {
-            runners.add(new Thread(new Evaluator.Runner(MARCH, i + 1, COUNT,atomic_i, fail, false_positive, success, timeout), "Runner_" + (i + 1)));
+            runners.add(new Thread(new Evaluator.Runner(MARCH, i + 1, COUNT, atomic_i, fail, false_positive, success, timeout), "Runner_" + (i + 1)));
         }
         long start = System.currentTimeMillis();
         runners.forEach(Thread::start);
@@ -57,7 +63,7 @@ public class Evaluator {
             }
         });
         long end = System.currentTimeMillis();
-        System.out.println("Out of " + MARCH.getISA().getTestCases().getTestCaseList().size() + " test cases, " + fail.get() + " failed, " + false_positive.get() + " were falsely classified, " + success.get() + " succeeded and " + timeout.get() + "timed out.");
+        System.out.println("Out of " + MARCH.getISA().getTestCases().getTotalNumber() + " test cases, " + fail.get() + " failed, " + false_positive.get() + " were falsely classified, " + success.get() + " succeeded and " + timeout.get() + "timed out.");
         Duration duration = Duration.ofMillis(end - start);
         long HH = duration.toHours();
         long MM = duration.toMinutesPart();
@@ -70,16 +76,50 @@ public class Evaluator {
      */
     public static class Runner implements Runnable {
 
+        /**
+         * The microarchitecture
+         */
         private final MARCH MARCH;
+        /**
+         * The id of the runner thread
+         */
         private final int id;
+        /**
+         * The total number of threads
+         */
         private final int COUNT;
+        /**
+         * A shared integer to track progress among all threads
+         */
         private final AtomicInteger atomic_i;
+        /**
+         * Counter for failed testcases
+         */
         private final AtomicInteger fail;
+        /**
+         * Counter for false positives
+         */
         private final AtomicInteger false_positive;
+        /**
+         * Counter for successful testruns
+         */
         private final AtomicInteger success;
+        /**
+         * Counter for timeouts
+         */
         private final AtomicInteger timeout;
 
 
+        /**
+         * @param MARCH          The microarchitecture
+         * @param id             The id of the runner thread
+         * @param COUNT          The total number of threads
+         * @param atomic_i       A shared integer to track progress among all threads
+         * @param fail           Counter for false positives
+         * @param false_positive Counter for false positives
+         * @param success        Counter for successful testruns
+         * @param timeout        Counter for timeouts
+         */
         Runner(MARCH MARCH, int id, int COUNT, AtomicInteger atomic_i, AtomicInteger fail, AtomicInteger false_positive, AtomicInteger success, AtomicInteger timeout) {
             this.MARCH = MARCH;
             this.id = id;
@@ -93,11 +133,11 @@ public class Evaluator {
 
         @Override
         public void run() {
-            for (TestCase testCase: MARCH.getISA().getTestCases().getChunk(id, COUNT)) {
+            MARCH.getISA().getTestCases().getIterator(id).forEachRemaining(testCase -> {
                 MARCH.writeTestCase(id, testCase);
                 SIMULATION_RESULT pass = MARCH.simulate(id);
                 int i = atomic_i.incrementAndGet();
-                System.out.printf("Current progress: %d of %d.\r", i, MARCH.getISA().getTestCases().getTestCaseList().size());
+                System.out.printf("Current progress: %d of %d.\r", i, MARCH.getISA().getTestCases().getTotalNumber());
                 switch (pass) {
                     case SUCCESS -> success.incrementAndGet();
                     case FAIL -> fail.incrementAndGet();
@@ -105,7 +145,7 @@ public class Evaluator {
                     case TIMEOUT -> timeout.incrementAndGet();
                     case UNKNOWN -> System.out.println("Unknown error.");
                 }
-            }
+            });
         }
     }
 }

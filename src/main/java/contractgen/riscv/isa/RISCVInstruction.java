@@ -23,6 +23,13 @@ import java.util.stream.Stream;
 @SuppressWarnings("MissingJavadoc")
 public record RISCVInstruction(RISCV_TYPE type, Integer rd, Integer rs1, Integer rs2, Long imm) implements Instruction {
 
+
+    private static final Set<RISCV_TYPE> loads = Set.of(RISCV_TYPE.LB, RISCV_TYPE.LH, RISCV_TYPE.LW, RISCV_TYPE.LBU, RISCV_TYPE.LHU);
+    private static final Set<RISCV_TYPE> stores = Set.of(RISCV_TYPE.SB, RISCV_TYPE.SH, RISCV_TYPE.SW);
+
+    private static final Set<RISCV_TYPE> branches = Set.of(RISCV_TYPE.BEQ, RISCV_TYPE.BNE, RISCV_TYPE.BLT, RISCV_TYPE.BGE, RISCV_TYPE.BLTU, RISCV_TYPE.BGEU);
+    private static final Set<RISCV_TYPE> jumps = Set.of(RISCV_TYPE.JAL, RISCV_TYPE.JALR);
+
     /**
      * @param rd The new destination register.
      * @return   A clone of the instruction with the given destination register.
@@ -135,6 +142,90 @@ public record RISCVInstruction(RISCV_TYPE type, Integer rd, Integer rs1, Integer
                 yield s.charAt(0) + s.substring(10, 20) + s.charAt(9) + s.substring(1, 9);
             }
         };
+    }
+
+    public static boolean hasRD(RISCV_TYPE type) {
+     return switch (type.getFormat()) {
+         case RTYPE, ITYPE, UTYPE, JTYPE -> true;
+         case STYPE, BTYPE -> false;
+     };
+    }
+
+    public static boolean hasRS1(RISCV_TYPE type) {
+     return switch (type.getFormat()) {
+         case RTYPE, ITYPE, STYPE, BTYPE -> true;
+         case UTYPE, JTYPE -> false;
+     };
+    }
+
+    public static boolean hasRS2(RISCV_TYPE type) {
+     return switch (type.getFormat()) {
+         case RTYPE, STYPE, BTYPE -> true;
+         case ITYPE, UTYPE, JTYPE -> false;
+     };
+    }
+
+    public static boolean hasIMM(RISCV_TYPE type) {
+     return switch (type.getFormat()) {
+         case RTYPE -> true;
+         case ITYPE, UTYPE, JTYPE, STYPE, BTYPE -> false;
+     };
+    }
+
+    public static boolean isLOAD(RISCV_TYPE type) {
+        return loads.contains(type);
+    }
+    public static boolean isSTORE(RISCV_TYPE type) {
+        return stores.contains(type);
+    }
+    public static boolean isMEM(RISCV_TYPE type) {
+        return isLOAD(type) || isSTORE(type);
+    }
+
+    public static boolean isBRANCH(RISCV_TYPE type) {
+        return branches.contains(type);
+    }
+    public static boolean isJUMP(RISCV_TYPE type) {
+        return jumps.contains(type);
+    }
+    public static boolean isCONTROL(RISCV_TYPE type) {
+        return isBRANCH(type) || isJUMP(type);
+    }
+
+    public boolean hasRD() {
+        return rd != null;
+    }
+
+    public boolean hasRS1() {
+        return rs1 != null;
+    }
+
+    public boolean hasRS2() {
+        return rs2 != null;
+    }
+
+    public boolean hasIMM() {
+        return imm != null;
+    }
+
+    public boolean isLOAD() {
+        return loads.contains(type);
+    }
+    public boolean isSTORE() {
+        return stores.contains(type);
+    }
+    public boolean isMEM() {
+        return isLOAD() || isSTORE();
+    }
+
+    public boolean isBRANCH() {
+        return branches.contains(type);
+    }
+    public boolean isJUMP() {
+        return jumps.contains(type);
+    }
+    public boolean isCONTROL() {
+        return isBRANCH() || isJUMP();
     }
 
     @Override

@@ -1,5 +1,7 @@
 package contractgen;
 
+import java.io.IOException;
+
 /**
  * Wrapper to start contract generation using different backends.
  */
@@ -22,5 +24,5 @@ public abstract class Generator {
      *
      * @return The generated contract.
      */
-    public abstract Contract generate();
+    public abstract Contract generate() throws IOException;
 }

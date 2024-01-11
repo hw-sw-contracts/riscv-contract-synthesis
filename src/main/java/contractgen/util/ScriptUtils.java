@@ -14,10 +14,10 @@ import java.util.concurrent.TimeUnit;
 public class ScriptUtils {
 
     /**
-     * @param path          The path of the script.
-     * @param silent        Whether the output should be printed to the console.
-     * @param maxSeconds    The timeout in seconde.
-     * @return              The console output.
+     * @param path       The path of the script.
+     * @param silent     Whether the output should be printed to the console.
+     * @param maxSeconds The timeout in seconde.
+     * @return The console output.
      */
     public static String runScript(String path, boolean silent, int maxSeconds) {
         Process p = null;
@@ -27,7 +27,6 @@ public class ScriptUtils {
             List<String> cmdList = new ArrayList<>(List.of(path.split(" +")));
             ProcessBuilder pb = new ProcessBuilder(cmdList);
             pb.directory(new File(path.split(" +")[0]).getParentFile());
-            // System.out.println("Starting Script...");
             boolean success = false;
             while (!success) {
                 try {

@@ -18,20 +18,20 @@ public class SimpleIVerilogGenerator extends Generator {
     @Override
     public Contract generate() {
         // compile
-        long milis = System.currentTimeMillis();
+        final long[] milis = {System.currentTimeMillis()};
         MARCH.compile();
-        System.out.println(System.currentTimeMillis() - milis);
+        System.out.println(System.currentTimeMillis() - milis[0]);
         // copy binary and write test case
-        int i = 0;
-        long avg = 0;
-        for (TestCase testCase: MARCH.getISA().getTestCases().getTestCaseList()) {
+        final int[] i = {0};
+        final long[] avg = {0};
+        MARCH.getISA().getTestCases().getIterator(0).forEachRemaining(testCase ->  {
             MARCH.writeTestCase(testCase);
-            milis = System.currentTimeMillis();
+            milis[0] = System.currentTimeMillis();
             SIMULATION_RESULT pass = MARCH.simulate();
-            i++;
-            long time = System.currentTimeMillis() - milis;
-            avg = avg + time;
-            System.out.printf("Current progress: %d of %d. Stats: last %d ms, avg %d ms\r", i, MARCH.getISA().getTestCases().getTestCaseList().size(), time, avg / i);
+            i[0]++;
+            long time = System.currentTimeMillis() - milis[0];
+            avg[0] = avg[0] + time;
+            System.out.printf("Current progress: %d of %d. Stats: last %d ms, avg %d ms\r", i[0], MARCH.getISA().getTestCases().getTotalNumber(), time, avg[0] / i[0]);
             if (pass == SIMULATION_RESULT.FAIL) {
                 System.out.println(testCase);
                 Pair<TestResult, TestResult> ctx = MARCH.extractCTX(testCase);
@@ -41,7 +41,7 @@ public class SimpleIVerilogGenerator extends Generator {
                 MARCH.compile();
                 System.out.println("New Contract: \n" + MARCH.getISA().getContract().toString());
             }
-        }
+        });
         System.out.println(MARCH.getISA().getContract());
         return MARCH.getISA().getContract();
     }

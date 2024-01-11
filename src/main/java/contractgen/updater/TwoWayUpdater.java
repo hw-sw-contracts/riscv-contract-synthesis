@@ -16,7 +16,7 @@ public class TwoWayUpdater implements Updater {
 
 
     @Override
-    public Set<Observation> update(List<TestResult> testResults) {
+    public Set<Observation> update(List<TestResult> testResults, Set<Observation> ignored) {
         Set<Observation> new_contract;
         Set<Observation> negative = new HashSet<>();
         testResults.stream().filter(TestResult::isAdversaryDistinguishable).forEach(ctx -> negative.addAll(ctx.getPossibleObservations()));

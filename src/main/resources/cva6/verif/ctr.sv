@@ -1,4 +1,5 @@
 `define TYPE_R 3'd0
+`define TYPE_R 3'd0
 `define TYPE_I 3'd1
 `define TYPE_S 3'd2
 `define TYPE_B 3'd3
@@ -141,43 +142,136 @@ module ctr(
     input logic [31:0] mem_addr_2,
     input logic [31:0] mem_r_data_1,
     input logic [31:0] mem_r_data_2,
+    input logic [3:0] mem_r_mask_1,
+    input logic [3:0] mem_r_mask_2,
     input logic [31:0] mem_w_data_1,
     input logic [31:0] mem_w_data_2,
-    output logic ctr_equiv_o,
+    input logic [3:0] mem_w_mask_1,
+    input logic [3:0] mem_w_mask_2,
+    input logic [31:0] new_pc_1,
+    input logic [31:0] new_pc_2,
+    output logic ctr_equiv_o
 );
 
+    logic [5:0] old_rd_1_1 = 0;
+     logic [5:0] old_rd_1_2 = 0;
+     logic [5:0] old_rd_1_3 = 0;
+     logic [5:0] old_rd_1_4 = 0;
+     logic [5:0] old_rd_2_1 = 0;
+     logic [5:0] old_rd_2_2 = 0;
+     logic [5:0] old_rd_2_3 = 0;
+     logic [5:0] old_rd_2_4 = 0;
+     always @(negedge clk_i) begin
+         if (retire_i == 1) begin
+             old_rd_1_1 <= {1'b1, rd_1};
+             old_rd_1_2 <= old_rd_1_1;
+             old_rd_1_3 <= old_rd_1_2;
+             old_rd_1_4 <= old_rd_1_3;
+             old_rd_2_1 <= {1'b1, rd_2};
+             old_rd_2_2 <= old_rd_2_1;
+             old_rd_2_3 <= old_rd_2_2;
+             old_rd_2_4 <= old_rd_2_3;
+         end
+     end
+
+     logic raw_rs1_1_1;
+     assign raw_rs1_1_1 = {1'b1, rs1_1} == old_rd_1_1;
+     logic raw_rs2_1_1;
+     assign raw_rs2_1_1 = {1'b1, rs2_1} == old_rd_1_1;
+     logic waw_1_1;
+     assign waw_1_1 = {1'b1, rd_1} == old_rd_1_1;
+
+     logic raw_rs1_1_2;
+     assign raw_rs1_1_2 = {1'b1, rs1_2} == old_rd_2_1;
+     logic raw_rs2_1_2;
+     assign raw_rs2_1_2 = {1'b1, rs2_2} == old_rd_2_1;
+     logic waw_1_2;
+     assign waw_1_2 = {1'b1, rd_2} == old_rd_2_1;
+
+     logic raw_rs1_2_1;
+     assign raw_rs1_2_1 = {1'b1, rs1_1} == old_rd_1_2;
+     logic raw_rs2_2_1;
+     assign raw_rs2_2_1 = {1'b1, rs2_1} == old_rd_1_2;
+     logic waw_2_1;
+     assign waw_2_1 = {1'b1, rd_1} == old_rd_1_2;
+
+     logic raw_rs1_2_2;
+     assign raw_rs1_2_2 = {1'b1, rs1_2} == old_rd_2_2;
+     logic raw_rs2_2_2;
+     assign raw_rs2_2_2 = {1'b1, rs2_2} == old_rd_2_2;
+     logic waw_2_2;
+     assign waw_2_2 = {1'b1, rd_2} == old_rd_2_2;
+
+     logic raw_rs1_3_1;
+     assign raw_rs1_3_1 = {1'b1, rs1_1} == old_rd_1_3;
+     logic raw_rs2_3_1;
+     assign raw_rs2_3_1 = {1'b1, rs2_1} == old_rd_1_3;
+     logic waw_3_1;
+     assign waw_3_1 = {1'b1, rd_1} == old_rd_1_3;
+
+     logic raw_rs1_3_2;
+     assign raw_rs1_3_2 = {1'b1, rs1_2} == old_rd_2_3;
+     logic raw_rs2_3_2;
+     assign raw_rs2_3_2 = {1'b1, rs2_2} == old_rd_2_3;
+     logic waw_3_2;
+     assign waw_3_2 = {1'b1, rd_2} == old_rd_2_3;
+
+     logic raw_rs1_4_1;
+     assign raw_rs1_4_1 = {1'b1, rs1_1} == old_rd_1_4;
+     logic raw_rs2_4_1;
+     assign raw_rs2_4_1 = {1'b1, rs2_1} == old_rd_1_4;
+     logic waw_4_1;
+     assign waw_4_1 = {1'b1, rd_1} == old_rd_1_4;
+
+     logic raw_rs1_4_2;
+     assign raw_rs1_4_2 = {1'b1, rs1_2} == old_rd_2_4;
+     logic raw_rs2_4_2;
+     assign raw_rs2_4_2 = {1'b1, rs2_2} == old_rd_2_4;
+     logic waw_4_2;
+     assign waw_4_2 = {1'b1, rd_2} == old_rd_2_4;
+
     struct {
-        logic [2:0] format;
-        logic [6:0] op;
-        logic [2:0] funct_3;
-        logic [6:0] funct_7;
-        logic [4:0] rd;
-        logic [4:0] rs1;
-        logic [4:0] rs2;
-        logic [31:0] imm;
-        logic [31:0] reg_rs1;
-        logic [31:0] reg_rs2;
-        logic [31:0] reg_rd;
-        logic [31:0] mem_addr;
-        logic [31:0] mem_r_data;
-        logic [31:0] mem_w_data;
+        logic [3:0] format;
+        logic [7:0] op;
+        logic [3:0] funct_3;
+        logic [7:0] funct_7;
+        logic [5:0] rd;
+        logic [5:0] rs1;
+        logic [5:0] rs2;
+        logic [32:0] imm;
+        logic [32:0] reg_rs1;
+        logic [32:0] reg_rs2;
+        logic [32:0] reg_rd;
+        logic [32:0] mem_addr;
+        logic [32:0] mem_r_data;
+        logic [32:0] mem_w_data;
+        logic [2:0] is_branch;
+        logic [2:0] branch_taken;
+        logic [2:0] is_aligned;
+        logic [2:0] is_half_aligned;
+        logic [32:0] new_pc;
     } ctr_observation_1;
 
     struct {
-        logic [2:0] format;
-        logic [6:0] op;
-        logic [2:0] funct_3;
-        logic [6:0] funct_7;
-        logic [4:0] rd;
-        logic [4:0] rs1;
-        logic [4:0] rs2;
-        logic [31:0] imm;
-        logic [31:0] reg_rs1;
-        logic [31:0] reg_rs2;
-        logic [31:0] reg_rd;
-        logic [31:0] mem_addr;
-        logic [31:0] mem_r_data;
-        logic [31:0] mem_w_data;
+        logic [3:0] format;
+        logic [7:0] op;
+        logic [3:0] funct_3;
+        logic [7:0] funct_7;
+        logic [5:0] rd;
+        logic [5:0] rs1;
+        logic [5:0] rs2;
+        logic [32:0] imm;
+        logic [32:0] reg_rs1;
+        logic [32:0] reg_rs2;
+        logic [32:0] reg_rd;
+        logic [32:0] mem_addr;
+        logic [32:0] mem_r_data;
+        logic [32:0] mem_w_data;
+        logic [2:0] is_branch;
+        logic [2:0] branch_taken;
+        logic [2:0] is_aligned;
+        logic [2:0] is_half_aligned;
+        logic [32:0] new_pc;
     } ctr_observation_2;
 
     
@@ -186,6 +280,23 @@ module ctr(
     logic [6:0] funct_7_1;
     logic [2:0] format_1;
     logic [31:0] imm_1;
+
+    logic is_branch_1;
+    logic branch_taken_1;
+    logic is_aligned_1;
+    logic is_half_aligned_1;
+    assign is_branch_1 = (op_1 == `JAL_OP) || (op_1 == `JALR_OP) || (op_1 == `BEQ_OP); //all branches have the same opcode
+    assign branch_taken_1 =
+            (op_1 == `JAL_OP)
+        ||  (op_1 == `JALR_OP)
+        ||  ((op_1 == `BEQ_OP) && (funct_3_1 == `BEQ_FUNCT_3) && (reg_rs1_1 == reg_rs2_1))
+        ||  ((op_1 == `BNE_OP) && (funct_3_1 == `BNE_FUNCT_3) && (reg_rs1_1 != reg_rs2_1))
+        ||  ((op_1 == `BLT_OP) && (funct_3_1 == `BLT_FUNCT_3) && ($signed(reg_rs1_1) < $signed(reg_rs2_1)))
+        ||  ((op_1 == `BGE_OP) && (funct_3_1 == `BGE_FUNCT_3) && ($signed(reg_rs1_1) >= $signed(reg_rs2_1)))
+        ||  ((op_1 == `BLTU_OP) && (funct_3_1 == `BLTU_FUNCT_3) && (reg_rs1_1 < reg_rs2_1))
+        ||  ((op_1 == `BGEU_OP) && (funct_3_1 == `BGEU_FUNCT_3) && (reg_rs1_1 >= reg_rs2_1));
+    assign is_aligned_1 = mem_addr_1[1:0] == 2'b00;
+    assign is_half_aligned_1 = mem_addr_1[1:0] != 2'b11;
 
     riscv_decoder decoder_1 (
         .instr_i            (instr_1_i),
@@ -196,7 +307,7 @@ module ctr(
         .rd_o               (),
         .rs1_o              (),
         .rs2_o              (),
-        .imm_o              (imm_1),
+        .imm_o              (imm_1)
     );
 
     logic [6:0] op_2;
@@ -204,6 +315,23 @@ module ctr(
     logic [6:0] funct_7_2;
     logic [2:0] format_2;
     logic [31:0] imm_2;
+
+    logic is_branch_2;
+    logic branch_taken_2;
+    logic is_aligned_2;
+    logic is_half_aligned_2;
+    assign is_branch_2 = (op_2 == `JAL_OP) || (op_2 == `JALR_OP) || (op_2 == `BEQ_OP); //all branches have the same opcode
+    assign branch_taken_2 =
+        (op_2 == `JAL_OP)
+            ||  (op_2 == `JALR_OP)
+            ||  ((op_2 == `BEQ_OP) && (funct_3_2 == `BEQ_FUNCT_3) && (reg_rs1_2 == reg_rs2_2))
+            ||  ((op_2 == `BNE_OP) && (funct_3_2 == `BNE_FUNCT_3) && (reg_rs1_2 != reg_rs2_2))
+            ||  ((op_2 == `BLT_OP) && (funct_3_2 == `BLT_FUNCT_3) && ($signed(reg_rs1_2) < $signed(reg_rs2_2)))
+            ||  ((op_2 == `BGE_OP) && (funct_3_2 == `BGE_FUNCT_3) && ($signed(reg_rs1_2) >= $signed(reg_rs2_2)))
+            ||  ((op_2 == `BLTU_OP) && (funct_3_2 == `BLTU_FUNCT_3) && (reg_rs1_2 < reg_rs2_2))
+            ||  ((op_2 == `BGEU_OP) && (funct_3_2 == `BGEU_FUNCT_3) && (reg_rs1_2 >= reg_rs2_2));
+    assign is_aligned_2 = mem_addr_2[1:0] == 2'b00;
+    assign is_half_aligned_2 = mem_addr_2[1:0] != 2'b11;
 
     riscv_decoder decoder_2 (
         .instr_i            (instr_2_i),
@@ -214,13 +342,15 @@ module ctr(
         .rd_o               (),
         .rs1_o              (),
         .rs2_o              (),
-        .imm_o              (imm_2),
+        .imm_o              (imm_2)
     );
 
     initial ctr_equiv_o <= 1;
-    initial ctr_observation_1 <= {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-    initial ctr_observation_2 <= {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    initial ctr_observation_1 <= 0;
+    initial ctr_observation_2 <= 0;
 
+    integer i;
+    logic [31:0] temp;
     always @(negedge clk_i) begin
         if (retire_i == 1) begin
             

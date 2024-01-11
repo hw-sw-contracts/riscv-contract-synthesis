@@ -5,7 +5,7 @@ module control (
     input logic fetch_2_i,
     output logic enable_1_o,
     output logic enable_2_o,
-    output logic finished_o,
+    output logic finished_o
 );
     (* nomem2reg *)
     reg [31:0] counters [0:0];

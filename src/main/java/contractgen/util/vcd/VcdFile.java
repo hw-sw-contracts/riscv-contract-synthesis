@@ -11,16 +11,40 @@ import java.util.regex.Pattern;
  */
 public class VcdFile {
 
+    /**
+     * The timesacle property of the VCD file.
+     */
     private String timescale = null;
+    /**
+     * The date property of the VCD file.
+     */
     private String date = null;
+    /**
+     * The version property of the VCD file.
+     */
     private String version = null;
+    /**
+     * The top module.
+     */
     private Module top = null;
+    /**
+     * The current module (used while parsing).
+     */
     private Module current = null;
 
+    /**
+     * The current time (used while parsing).
+     */
     private Integer time = null;
 
+    /**
+     * The pattern to identify variables.
+     */
     private final Pattern varPattern = Pattern.compile("\\s?(.*?) (.*?) (.*?) (.*?)( .*|$)");
 
+    /**
+     * The set of wires in the vcd file.
+     */
     private final Map<String, Wire> wires = new HashMap<>();
 
     /**
@@ -43,6 +67,9 @@ public class VcdFile {
     }
 
 
+    /**
+     * @param simulation the simulation part of the VCD file.
+     */
     private void parseSimulation(String simulation) {
         List<String> lines = List.of(simulation.split("\n"));
         Pattern p = Pattern.compile("b([01xzXZ]*) ?(.*)|([01xzXZ]) ?(.*)");
@@ -67,12 +94,19 @@ public class VcdFile {
         }
     }
 
+    /**
+     * @param definitions the definition part of the VCD file.
+     */
     private void parseDefinitions(String definitions) {
         Pattern p = Pattern.compile("\\$(.*?)(?: (.*?) | )\\$end\\n?");
         Matcher m = p.matcher(definitions);
         m.results().forEach(res -> parseDefinition(res.group(1), res.group(2)));
     }
 
+    /**
+     * @param name    The name of the definition, e.g. date, scope var etc.
+     * @param content The content of this property.ti
+     */
     private void parseDefinition(String name, String content) {
         if ("comment".equals(name)) {
             System.out.println("Found comment " + content);

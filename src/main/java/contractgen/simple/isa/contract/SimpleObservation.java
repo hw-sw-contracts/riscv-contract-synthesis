@@ -27,4 +27,9 @@ public record SimpleObservation(SIMPLE_TYPE type, SIMPLE_OBSERVATION_TYPE observ
     public String toString() {
         return "\t\t" + type.toString() + ": " + observation.toString();
     }
+
+    @Override
+    public boolean isApplicable() {
+        return true;
+    }
 }

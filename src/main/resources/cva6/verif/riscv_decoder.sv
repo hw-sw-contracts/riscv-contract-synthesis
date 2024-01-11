@@ -53,7 +53,7 @@ module riscv_decoder (
     output logic [4:0] rd_o,
     output logic [4:0] rs1_o,
     output logic [4:0] rs2_o,
-    output logic [31:0] imm_o,
+    output logic [31:0] imm_o
 );
     
     assign op_o = instr_i[6:0];

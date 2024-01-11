@@ -18,4 +18,9 @@ public interface Observation {
 
     @Override
     String toString();
+
+    /**
+     * @return whether this observation is applicable.
+     */
+    boolean isApplicable();
 }

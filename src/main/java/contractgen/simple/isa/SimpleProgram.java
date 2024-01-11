@@ -10,9 +10,18 @@ import java.util.Map;
  */
 public class SimpleProgram implements Program {
 
+    /**
+     * The number of registers in the ISA
+     */
     private static final int NUMBER_REGISTERS = 8;
+    /**
+     * A mapping for each register to a specific value
+     */
     private final Map<Integer, Integer> registers;
 
+    /**
+     * A sequence of instructions to be evaluated
+     */
     private final List<SimpleInstruction> program;
 
     /**
@@ -25,7 +34,7 @@ public class SimpleProgram implements Program {
     }
 
     @Override
-    public String printSymbolic () {
+    public String printSymbolic() {
         StringBuilder sb = new StringBuilder();
         for (int i = 1; i < NUMBER_REGISTERS; i++) {
             if (registers.containsKey(i) && registers.get(i) != 0) {
@@ -40,7 +49,7 @@ public class SimpleProgram implements Program {
     }
 
     @Override
-    public String printProgram (Integer address) {
+    public String printProgram(Integer address) {
         StringBuilder sb = new StringBuilder();
         for (int i = 1; i < NUMBER_REGISTERS; i++) {
             if (registers.containsKey(i) && registers.get(i) != 0) {

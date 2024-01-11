@@ -6,7 +6,9 @@ RUN DEBIAN_FRONTEND=noninteractive TZ=Europe/Berlin apt-get install -y build-ess
                      xdot pkg-config python2 python3 libftdi-dev gperf \
                      libboost-program-options-dev autoconf libgmp-dev \
                      cmake curl cmake ninja-build g++ python3-dev python3-setuptools \
-                     python3-pip python2-dev autoconf gperf
+                     python3-pip python2-dev autoconf gperf \
+                     gcc-11 g++-11 tclsh ant default-jre swig google-perftools libgoogle-perftools-dev \
+                     python3-dev uuid uuid-dev libfl-dev wget python3-orderedmultidict
 RUN curl https://bootstrap.pypa.io/pip/2.7/get-pip.py --output get-pip.py
 RUN /usr/bin/python2.7 get-pip.py
 
@@ -16,10 +18,22 @@ WORKDIR /home/yosys/tools
 
 RUN git clone https://github.com/YosysHQ/yosys.git yosys
 WORKDIR /home/yosys/tools/yosys
+RUN git fetch --all --tags && git checkout yosys-0.30
 RUN mkdir build
 WORKDIR /home/yosys/tools/yosys/build
 RUN make -j$(nproc) -f ../Makefile
 RUN make install -f ../Makefile
+WORKDIR /home/yosys/tools
+
+RUN git clone https://github.com/chipsalliance/synlig synlig
+WORKDIR /home/yosys/tools/synlig
+RUN git fetch --all --tags && git checkout 2023-06-30-eceb24b
+RUN git submodule update --init --recursive Surelog yosys yosys-f4pga-plugins UHDM-integration-tests
+RUN ./build_binaries.sh
+#RUN git submodule sync
+#RUN git submodule update --init --recursive third_party/surelog
+#RUN git submodule update --init --recursive third_party/yosys
+#RUN make install
 WORKDIR /home/yosys/tools
 
 RUN git clone https://github.com/YosysHQ/SymbiYosys.git SymbiYosys
@@ -84,7 +98,6 @@ RUN ./configure.sh
 RUN make -C build -j$(nproc)
 RUN cp build/bin/boolector /usr/local/bin/
 RUN cp build/bin/btor* /usr/local/bin/
-RUN cp deps/btor2tools/bin/btorsim /usr/local/bin/
 WORKDIR /home/yosys/tools
 
 RUN git clone https://github.com/boolector/btor2tools
@@ -114,8 +127,8 @@ WORKDIR /home/yosys
 
 FROM ubuntu:latest as main
 
-RUN groupadd -g 1001 yosys
-RUN useradd yosys -u 1001 -g 1001 -m -d /home/yosys -s /bin/bash
+RUN groupadd -g 1002 yosys
+RUN useradd yosys -u 1002 -g 1002 -m -d /home/yosys -s /bin/bash
 WORKDIR /home/yosys
 
 RUN apt update
@@ -135,6 +148,7 @@ COPY --from=build /usr/local/share /usr/local/share
 COPY --from=build /usr/bin/z3 /usr/bin/z3
 COPY --from=build /usr/local/super_prove /usr/local/super_prove
 COPY --from=build /root/.local/bin/sv2v /usr/local/bin/sv2v
+COPY --from=build /home/yosys/tools/synlig/image/share/yosys/plugins /usr/local/share/yosys/plugins
 
 USER yosys
 

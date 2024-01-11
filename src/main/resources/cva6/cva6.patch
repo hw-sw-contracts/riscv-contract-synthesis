@@ -1,0 +1,2277 @@
+From 64fa784701e845e8e25d2160a9e508b77f0f7015 Mon Sep 17 00:00:00 2001
+From: Gideon Mohr <gideon@contractgen>
+Date: Fri, 4 Aug 2023 12:32:24 +0000
+Subject: [PATCH] CVA6
+
+---
+ common/local/util/sram.sv                     |   7 +-
+ core/acc_dispatcher.sv                        |   2 +-
+ core/alu.sv                                   |  14 +-
+ core/amo_buffer.sv                            |   6 +-
+ core/cache_subsystem/cva6_icache.sv           |   4 +-
+ core/cache_subsystem/wt_axi_adapter.sv        |  10 +-
+ core/cache_subsystem/wt_dcache.sv             |   4 +-
+ core/cache_subsystem/wt_dcache_ctrl.sv        |   4 +-
+ core/cache_subsystem/wt_dcache_mem.sv         |   8 +-
+ core/cache_subsystem/wt_dcache_missunit.sv    |   2 +-
+ core/cache_subsystem/wt_dcache_wbuffer.sv     |  10 +-
+ core/commit_stage.sv                          |   4 +-
+ core/csr_buffer.sv                            |   2 +-
+ core/csr_regfile.sv                           |  57 +++----
+ core/cva6.sv                                  | 141 ++++--------------
+ core/cvxif_fu.sv                              |   2 +-
+ core/decoder.sv                               |  73 ++++-----
+ core/ex_stage.sv                              |  12 +-
+ core/frontend/bht.sv                          |  29 ++--
+ core/frontend/btb.sv                          |  14 +-
+ core/frontend/frontend.sv                     |  17 ++-
+ core/frontend/instr_queue.sv                  |  11 +-
+ core/include/acc_pkg.sv                       |   6 +-
+ core/include/ariane_pkg.sv                    |  74 +++++----
+ core/include/cv32a6_imac_sv32_config_pkg.sv   |   4 +-
+ core/include/riscv_pkg.sv                     |   8 +-
+ core/include/wt_cache_pkg.sv                  |   6 +-
+ core/issue_read_operands.sv                   |  12 +-
+ core/issue_stage.sv                           |   8 +-
+ core/load_store_unit.sv                       |  55 ++++++-
+ core/load_unit.sv                             |   4 +-
+ core/mmu_sv32/cva6_ptw_sv32.sv                |   2 +-
+ core/mult.sv                                  |  10 +-
+ core/multiplier.sv                            |   6 +-
+ core/perf_counters.sv                         |   4 +-
+ core/scoreboard.sv                            |  14 +-
+ core/store_buffer.sv                          |  92 ++++++++----
+ core/store_unit.sv                            |   4 +-
+ corev_apu/tb/common/tb_readport.sv            |   2 +-
+ corev_apu/tb/tb_wt_axi_dcache/hdl/tb.sv       |   2 +-
+ .../pulp-platform/common_cells/src/fifo_v3.sv |  18 +--
+ .../common_cells/src/popcount.sv              |  17 ++-
+ .../common_cells/src/rr_arb_tree.sv           |   4 +-
+ .../tech_cells_generic/src/rtl/tc_sram.sv     |  28 ++--
+ 44 files changed, 430 insertions(+), 383 deletions(-)
+
+diff --git a/common/local/util/sram.sv b/common/local/util/sram.sv
+index 4c0f2d25..0924f479 100644
+--- a/common/local/util/sram.sv
++++ b/common/local/util/sram.sv
+@@ -23,7 +23,7 @@ module sram #(
+     parameter USER_WIDTH = 1,
+     parameter USER_EN    = 0,
+     parameter NUM_WORDS  = 1024,
+-    parameter SIM_INIT   = "none",
++    parameter SIM_INIT   = "zeros",
+     parameter OUT_REGS   = 0     // enables output registers in FPGA macro (read lat = 2)
+ )(
+    input  logic                          clk_i,
+@@ -48,6 +48,11 @@ logic [BE_WIDTH_ALIGNED-1:0]    be_aligned;
+ logic [DATA_WIDTH_ALIGNED-1:0]  rdata_aligned;
+ logic [USER_WIDTH_ALIGNED-1:0]  ruser_aligned;
+ 
++initial begin
++    rdata_o = 0;
++    ruser_o = 0;
++end
++
+ // align to 64 bits for inferrable macro below
+ always_comb begin : p_align
+     wdata_aligned                    ='0;
+diff --git a/core/acc_dispatcher.sv b/core/acc_dispatcher.sv
+index 8e965f4d..76ef3b9f 100644
+--- a/core/acc_dispatcher.sv
++++ b/core/acc_dispatcher.sv
+@@ -36,7 +36,7 @@ module acc_dispatcher import ariane_pkg::*; import riscv::*; #(
+     input  fu_data_t                              fu_data_i,
+     input  scoreboard_entry_t [CVA6Cfg.NrCommitPorts-1:0] commit_instr_i,
+     output logic              [TRANS_ID_BITS-1:0] acc_trans_id_o,
+-    output xlen_t                                 acc_result_o,
++    output logic [riscv::XLEN-1:0]                                 acc_result_o,
+     output logic                                  acc_valid_o,
+     output exception_t                            acc_exception_o,
+     // Interface with the execute stage
+diff --git a/core/alu.sv b/core/alu.sv
+index 0e0d3aa0..8b7ee18b 100644
+--- a/core/alu.sv
++++ b/core/alu.sv
+@@ -24,11 +24,11 @@ module alu import ariane_pkg::*; #(
+     input  logic                     clk_i,          // Clock
+     input  logic                     rst_ni,         // Asynchronous reset active low
+     input  fu_data_t                 fu_data_i,
+-    output riscv::xlen_t             result_o,
++    output  logic [riscv::XLEN-1:0]              result_o,
+     output logic                     alu_branch_res_o
+ );
+ 
+-    riscv::xlen_t operand_a_rev;
++     logic [riscv::XLEN-1:0]  operand_a_rev;
+     logic [31:0] operand_a_rev32;
+     logic [riscv::XLEN:0] operand_b_neg;
+     logic [riscv::XLEN+1:0] adder_result_ext_o;
+@@ -57,7 +57,7 @@ module alu import ariane_pkg::*; #(
+     logic        adder_op_b_negate;
+     logic        adder_z_flag;
+     logic [riscv::XLEN:0] adder_in_a, adder_in_b;
+-    riscv::xlen_t adder_result;
++     logic [riscv::XLEN-1:0]  adder_result;
+     logic [riscv::XLEN-1:0] operand_a_bitmanip, bit_indx;
+ 
+     always_comb begin
+@@ -126,17 +126,17 @@ module alu import ariane_pkg::*; #(
+     logic        shift_left;          // should we shift left
+     logic        shift_arithmetic;
+ 
+-    riscv::xlen_t shift_amt;           // amount of shift, to the right
+-    riscv::xlen_t shift_op_a;          // input of the shifter
++     logic [riscv::XLEN-1:0]  shift_amt;           // amount of shift, to the right
++     logic [riscv::XLEN-1:0]  shift_op_a;          // input of the shifter
+     logic [31:0] shift_op_a32;        // input to the 32 bit shift operation
+ 
+-    riscv::xlen_t shift_result;
++     logic [riscv::XLEN-1:0]  shift_result;
+     logic [31:0] shift_result32;
+ 
+     logic [riscv::XLEN:0] shift_right_result;
+     logic [32:0] shift_right_result32;
+ 
+-    riscv::xlen_t shift_left_result;
++     logic [riscv::XLEN-1:0]  shift_left_result;
+     logic [31:0] shift_left_result32;
+ 
+     assign shift_amt = fu_data_i.operand_b;
+diff --git a/core/amo_buffer.sv b/core/amo_buffer.sv
+index 53838278..5a9d8270 100644
+--- a/core/amo_buffer.sv
++++ b/core/amo_buffer.sv
+@@ -25,7 +25,7 @@ module amo_buffer #(
+     output logic             ready_o,            // AMO unit is ready
+     input  ariane_pkg::amo_t amo_op_i,           // AMO Operation
+     input  logic [riscv::PLEN-1:0]      paddr_i,            // physical address of store which needs to be placed in the queue
+-    input  riscv::xlen_t     data_i,             // data which is placed in the queue
++    input   logic [riscv::XLEN-1:0]      data_i,             // data which is placed in the queue
+     input  logic [1:0]       data_size_i,        // type of request we are making (e.g.: bytes to write)
+     // D$
+     output ariane_pkg::amo_req_t  amo_req_o,          // request to cache subsytem
+@@ -40,7 +40,7 @@ module amo_buffer #(
+     typedef struct packed {
+         ariane_pkg::amo_t        op;
+         logic [riscv::PLEN-1:0] paddr;
+-        riscv::xlen_t data;
++         logic [riscv::XLEN-1:0]  data;
+         logic [1:0]  size;
+     } amo_op_t ;
+ 
+@@ -64,7 +64,7 @@ module amo_buffer #(
+ 
+     fifo_v3 #(
+         .DEPTH        ( 1                ),
+-        .dtype        ( amo_op_t         )
++        .DATA_WIDTH   ( $bits(amo_op_t)  )
+     ) i_amo_fifo (
+         .clk_i        ( clk_i            ),
+         .rst_ni       ( rst_ni           ),
+diff --git a/core/cache_subsystem/cva6_icache.sv b/core/cache_subsystem/cva6_icache.sv
+index 63f869a2..566ce8d6 100644
+--- a/core/cache_subsystem/cva6_icache.sv
++++ b/core/cache_subsystem/cva6_icache.sv
+@@ -452,7 +452,7 @@ end else begin : gen_piton_offset
+       // couple of cycle until we write to the cache upon a miss
+       .wuser_i   ( '0                       ),
+       .wdata_i   ( {vld_wdata[i], cl_tag_q} ),
+-      .be_i      ( '1                       ),
++      .be_i      ( 3'b111                   ),
+       .ruser_o   (                          ),
+       .rdata_o   ( cl_tag_valid_rdata[i]    )
+     );
+@@ -474,7 +474,7 @@ end else begin : gen_piton_offset
+       .addr_i    ( cl_index            ),
+       .wuser_i   ( mem_rtrn_i.user     ),
+       .wdata_i   ( mem_rtrn_i.data     ),
+-      .be_i      ( '1                  ),
++      .be_i      ( 3'b111              ),
+       .ruser_o   ( cl_ruser[i]         ),
+       .rdata_o   ( cl_rdata[i]         )
+     );
+diff --git a/core/cache_subsystem/wt_axi_adapter.sv b/core/cache_subsystem/wt_axi_adapter.sv
+index cc90d63d..19f69ad7 100644
+--- a/core/cache_subsystem/wt_axi_adapter.sv
++++ b/core/cache_subsystem/wt_axi_adapter.sv
+@@ -262,7 +262,7 @@ module wt_axi_adapter import ariane_pkg::*; import wt_cache_pkg::*; #(
+   end
+ 
+   fifo_v3 #(
+-    .dtype       (  icache_req_t            ),
++    .DATA_WIDTH  (  $bits(icache_req_t)     ),
+     .DEPTH       (  ReqFifoDepth            )
+   ) i_icache_data_fifo (
+     .clk_i       (  clk_i                   ),
+@@ -279,7 +279,7 @@ module wt_axi_adapter import ariane_pkg::*; import wt_cache_pkg::*; #(
+   );
+ 
+   fifo_v3 #(
+-    .dtype       (  dcache_req_t            ),
++    .DATA_WIDTH  (  $bits(dcache_req_t)     ),
+     .DEPTH       (  ReqFifoDepth            )
+   ) i_dcache_data_fifo (
+     .clk_i       (  clk_i                   ),
+@@ -320,7 +320,7 @@ module wt_axi_adapter import ariane_pkg::*; import wt_cache_pkg::*; #(
+   );
+ 
+   fifo_v3 #(
+-    .DATA_WIDTH ( wt_cache_pkg::CACHE_ID_WIDTH ),
++    .DATA_WIDTH ( cva6_config_pkg::CVA6ConfigMemTidWidth ),
+     .DEPTH      ( MetaFifoDepth                )
+   ) i_rd_dcache_id (
+     .clk_i      ( clk_i                   ),
+@@ -337,7 +337,7 @@ module wt_axi_adapter import ariane_pkg::*; import wt_cache_pkg::*; #(
+   );
+ 
+   fifo_v3 #(
+-    .DATA_WIDTH ( wt_cache_pkg::CACHE_ID_WIDTH ),
++    .DATA_WIDTH ( cva6_config_pkg::CVA6ConfigMemTidWidth ),
+     .DEPTH      ( MetaFifoDepth                 )
+   ) i_wr_dcache_id (
+     .clk_i      ( clk_i                   ),
+@@ -366,7 +366,7 @@ module wt_axi_adapter import ariane_pkg::*; import wt_cache_pkg::*; #(
+   assign b_push              = axi_wr_valid & axi_wr_rdy;
+ 
+   fifo_v3 #(
+-    .DATA_WIDTH   ( CVA6Cfg.AxiIdWidth + 1 ),
++    .DATA_WIDTH   ( cva6_config_pkg::CVA6ConfigAxiIdWidth + 1 ),
+     .DEPTH        ( MetaFifoDepth              ),
+     .FALL_THROUGH ( 1'b1                       )
+   ) i_b_fifo (
+diff --git a/core/cache_subsystem/wt_dcache.sv b/core/cache_subsystem/wt_dcache.sv
+index 9244817c..aeaace7f 100644
+--- a/core/cache_subsystem/wt_dcache.sv
++++ b/core/cache_subsystem/wt_dcache.sv
+@@ -68,7 +68,7 @@ module wt_dcache import ariane_pkg::*; import wt_cache_pkg::*; #(
+   logic                           wr_ack;
+   logic [DCACHE_CL_IDX_WIDTH-1:0] wr_idx;
+   logic [DCACHE_OFFSET_WIDTH-1:0] wr_off;
+-  riscv::xlen_t                   wr_data;
++   logic [riscv::XLEN-1:0]                    wr_data;
+   logic [(riscv::XLEN/8)-1:0]     wr_data_be;
+   logic [DCACHE_USER_WIDTH-1:0]   wr_user;
+ 
+@@ -94,7 +94,7 @@ module wt_dcache import ariane_pkg::*; import wt_cache_pkg::*; #(
+   logic [NumPorts-1:0][DCACHE_TAG_WIDTH-1:0]    rd_tag;
+   logic [NumPorts-1:0][DCACHE_CL_IDX_WIDTH-1:0] rd_idx;
+   logic [NumPorts-1:0][DCACHE_OFFSET_WIDTH-1:0] rd_off;
+-  riscv::xlen_t                                 rd_data;
++   logic [riscv::XLEN-1:0]                                  rd_data;
+   logic [DCACHE_USER_WIDTH-1:0]                 rd_user;
+   logic [DCACHE_SET_ASSOC-1:0]                  rd_vld_bits;
+   logic [DCACHE_SET_ASSOC-1:0]                  rd_hit_oh;
+diff --git a/core/cache_subsystem/wt_dcache_ctrl.sv b/core/cache_subsystem/wt_dcache_ctrl.sv
+index 204e2d72..9016f9b9 100644
+--- a/core/cache_subsystem/wt_dcache_ctrl.sv
++++ b/core/cache_subsystem/wt_dcache_ctrl.sv
+@@ -28,7 +28,7 @@ module wt_dcache_ctrl import ariane_pkg::*; import wt_cache_pkg::*; #(
+   output logic                            miss_req_o,
+   input  logic                            miss_ack_i,
+   output logic                            miss_we_o,       // unused (set to 0)
+-  output riscv::xlen_t                    miss_wdata_o,    // unused (set to 0)
++  output  logic [riscv::XLEN-1:0]                     miss_wdata_o,    // unused (set to 0)
+   output logic [DCACHE_USER_WIDTH-1:0]    miss_wuser_o,    // unused (set to 0)
+   output logic [DCACHE_SET_ASSOC-1:0]     miss_vld_bits_o, // valid bits at the missed index
+   output logic [riscv::PLEN-1:0]          miss_paddr_o,
+@@ -46,7 +46,7 @@ module wt_dcache_ctrl import ariane_pkg::*; import wt_cache_pkg::*; #(
+   output logic                            rd_req_o,        // read the word at offset off_i[:3] in all ways
+   output logic                            rd_tag_only_o,   // set to zero here
+   input  logic                            rd_ack_i,
+-  input  riscv::xlen_t                    rd_data_i,
++  input   logic [riscv::XLEN-1:0]                     rd_data_i,
+   input  logic [DCACHE_USER_WIDTH-1:0]    rd_user_i,
+   input  logic [DCACHE_SET_ASSOC-1:0]     rd_vld_bits_i,
+   input  logic [DCACHE_SET_ASSOC-1:0]     rd_hit_oh_i
+diff --git a/core/cache_subsystem/wt_dcache_mem.sv b/core/cache_subsystem/wt_dcache_mem.sv
+index d25a590a..c741a24a 100644
+--- a/core/cache_subsystem/wt_dcache_mem.sv
++++ b/core/cache_subsystem/wt_dcache_mem.sv
+@@ -44,7 +44,7 @@ module wt_dcache_mem import ariane_pkg::*; import wt_cache_pkg::*; #(
+   output logic  [NumPorts-1:0]                              rd_ack_o,
+   output logic                [DCACHE_SET_ASSOC-1:0]        rd_vld_bits_o,
+   output logic                [DCACHE_SET_ASSOC-1:0]        rd_hit_oh_o,
+-  output riscv::xlen_t                                      rd_data_o,
++  output  logic [riscv::XLEN-1:0]                                       rd_data_o,
+   output logic                [DCACHE_USER_WIDTH-1:0]       rd_user_o,
+ 
+   // only available on port 0, uses address signals of port 0
+@@ -64,7 +64,7 @@ module wt_dcache_mem import ariane_pkg::*; import wt_cache_pkg::*; #(
+   output logic                                              wr_ack_o,
+   input  logic                [DCACHE_CL_IDX_WIDTH-1:0]     wr_idx_i,
+   input  logic                [DCACHE_OFFSET_WIDTH-1:0]     wr_off_i,
+-  input  riscv::xlen_t                                      wr_data_i,
++  input   logic [riscv::XLEN-1:0]                                       wr_data_i,
+   input  logic                [DCACHE_USER_WIDTH-1:0]       wr_user_i,
+   input  logic                [(riscv::XLEN/8)-1:0]         wr_data_be_i,
+ 
+@@ -111,7 +111,7 @@ module wt_dcache_mem import ariane_pkg::*; import wt_cache_pkg::*; #(
+ 
+   logic [DCACHE_WBUF_DEPTH-1:0]                                 wbuffer_hit_oh;
+   logic [(riscv::XLEN/8)-1:0]                                   wbuffer_be;
+-  riscv::xlen_t                                                 wbuffer_rdata, rdata;
++   logic [riscv::XLEN-1:0]                                                  wbuffer_rdata, rdata;
+   logic [DCACHE_USER_WIDTH-1:0]                                 wbuffer_ruser, ruser;
+   logic [riscv::PLEN-1:0]                                       wbuffer_cmp_addr;
+ 
+@@ -164,7 +164,7 @@ module wt_dcache_mem import ariane_pkg::*; import wt_cache_pkg::*; #(
+     .clk_i  (clk_i   ),
+     .rst_ni (rst_ni  ),
+     .flush_i('0      ),
+-    .rr_i   ('0      ),
++    .rr_i   (2'b0    ),
+     .req_i  (rd_req_masked ),
+     .gnt_o  (rd_ack_o      ),
+     .data_i ('0            ),
+diff --git a/core/cache_subsystem/wt_dcache_missunit.sv b/core/cache_subsystem/wt_dcache_missunit.sv
+index 4fa09c4e..d871f46b 100644
+--- a/core/cache_subsystem/wt_dcache_missunit.sv
++++ b/core/cache_subsystem/wt_dcache_missunit.sv
+@@ -131,7 +131,7 @@ module wt_dcache_missunit import ariane_pkg::*; import wt_cache_pkg::*; #(
+   logic amo_sel, miss_is_write;
+   logic amo_req_d, amo_req_q;
+   logic [63:0] amo_rtrn_mux;
+-  riscv::xlen_t amo_data;
++   logic [riscv::XLEN-1:0]  amo_data;
+   logic [63:0] amo_user; //DCACHE USER ? DATA_USER_WIDTH
+   logic [riscv::PLEN-1:0] tmp_paddr;
+   logic [$clog2(NumPorts)-1:0] miss_port_idx;
+diff --git a/core/cache_subsystem/wt_dcache_wbuffer.sv b/core/cache_subsystem/wt_dcache_wbuffer.sv
+index 4334f06a..0fd29387 100644
+--- a/core/cache_subsystem/wt_dcache_wbuffer.sv
++++ b/core/cache_subsystem/wt_dcache_wbuffer.sv
+@@ -67,7 +67,7 @@ module wt_dcache_wbuffer import ariane_pkg::*; import wt_cache_pkg::*; #(
+   output logic [riscv::PLEN-1:0]             miss_paddr_o,
+   output logic                               miss_req_o,
+   output logic                               miss_we_o,       // always 1 here
+-  output riscv::xlen_t                       miss_wdata_o,
++  output  logic [riscv::XLEN-1:0]                        miss_wdata_o,
+   output logic [DCACHE_USER_WIDTH-1:0]       miss_wuser_o,
+   output logic [DCACHE_SET_ASSOC-1:0]        miss_vld_bits_o, // unused here (set to 0)
+   output logic                               miss_nc_o,       // request to I/O space
+@@ -83,7 +83,7 @@ module wt_dcache_wbuffer import ariane_pkg::*; import wt_cache_pkg::*; #(
+   output logic                               rd_req_o,        // read the word at offset off_i[:3] in all ways
+   output logic                               rd_tag_only_o,   // set to 1 here as we do not have to read the data arrays
+   input  logic                               rd_ack_i,
+-  input riscv::xlen_t                        rd_data_i,       // unused
++  input  logic [riscv::XLEN-1:0]                         rd_data_i,       // unused
+   input logic  [DCACHE_SET_ASSOC-1:0]        rd_vld_bits_i,   // unused
+   input logic  [DCACHE_SET_ASSOC-1:0]        rd_hit_oh_i,
+   // cacheline writes
+@@ -94,7 +94,7 @@ module wt_dcache_wbuffer import ariane_pkg::*; import wt_cache_pkg::*; #(
+   input  logic                               wr_ack_i,
+   output logic [DCACHE_CL_IDX_WIDTH-1:0]     wr_idx_o,
+   output logic [DCACHE_OFFSET_WIDTH-1:0]     wr_off_o,
+-  output riscv::xlen_t                       wr_data_o,
++  output  logic [riscv::XLEN-1:0]                        wr_data_o,
+   output logic [(riscv::XLEN/8)-1:0]         wr_data_be_o,
+   output logic [DCACHE_USER_WIDTH-1:0]       wr_user_o,
+   // to forwarding logic and miss unit
+@@ -266,7 +266,7 @@ module wt_dcache_wbuffer import ariane_pkg::*; import wt_cache_pkg::*; #(
+     .clk_i  (clk_i       ),
+     .rst_ni (rst_ni      ),
+     .flush_i('0          ),
+-    .rr_i   ('0          ),
++    .rr_i   (2'b0        ),
+     .req_i  (~tx_vld_o   ),
+     .gnt_o  (            ),
+     .data_i ('0          ),
+@@ -368,7 +368,7 @@ module wt_dcache_wbuffer import ariane_pkg::*; import wt_cache_pkg::*; #(
+     .clk_i  ( clk_i             ),
+     .rst_ni ( rst_ni            ),
+     .flush_i( '0                ),
+-    .rr_i   ( '0                ),
++    .rr_i   ( 3'b0              ),
+     .req_i  ( dirty             ),
+     .gnt_o  (                   ),
+     .data_i ( wbuffer_q         ),
+diff --git a/core/commit_stage.sv b/core/commit_stage.sv
+index 5ee099f5..7ec14ddc 100644
+--- a/core/commit_stage.sv
++++ b/core/commit_stage.sv
+@@ -37,8 +37,8 @@ module commit_stage import ariane_pkg::*; #(
+     output logic [riscv::VLEN-1:0]                  pc_o,
+     // to/from CSR file
+     output fu_op                                    csr_op_o,           // decoded CSR operation
+-    output riscv::xlen_t                            csr_wdata_o,        // data to write to CSR
+-    input  riscv::xlen_t                            csr_rdata_i,        // data to read from CSR
++    output  logic [riscv::XLEN-1:0]                             csr_wdata_o,        // data to write to CSR
++    input   logic [riscv::XLEN-1:0]                             csr_rdata_i,        // data to read from CSR
+     input  exception_t                              csr_exception_i,    // exception or interrupt occurred in CSR stage (the same as commit)
+     output logic                                    csr_write_fflags_o, // write the fflags CSR
+     // commit signals to ex
+diff --git a/core/csr_buffer.sv b/core/csr_buffer.sv
+index 819df9f1..b74a3a78 100644
+--- a/core/csr_buffer.sv
++++ b/core/csr_buffer.sv
+@@ -25,7 +25,7 @@ module csr_buffer import ariane_pkg::*; #(
+ 
+     output logic                     csr_ready_o,    // FU is ready e.g. not busy
+     input  logic                     csr_valid_i,    // Input is valid
+-    output riscv::xlen_t             csr_result_o,
++    output  logic [riscv::XLEN-1:0]              csr_result_o,
+     input  logic                     csr_commit_i,   // commit the pending CSR OP
+     // to CSR file
+     output logic  [11:0]             csr_addr_o      // CSR address to commit stage
+diff --git a/core/csr_regfile.sv b/core/csr_regfile.sv
+index 78f47538..4bb54ba6 100644
+--- a/core/csr_regfile.sv
++++ b/core/csr_regfile.sv
+@@ -100,7 +100,7 @@ module csr_regfile import ariane_pkg::*; #(
+     // internal signal to keep track of access exceptions
+     logic        read_access_exception, update_access_exception, privilege_violation;
+     logic        csr_we, csr_read;
+-    riscv::xlen_t csr_wdata, csr_rdata;
++     logic [riscv::XLEN-1:0]  csr_wdata, csr_rdata;
+     riscv::priv_lvl_t   trap_to_priv_lvl;
+     // register for enabling load store address translation, this is critical, hence the register
+     logic        en_ld_st_translation_d, en_ld_st_translation_q;
+@@ -111,7 +111,7 @@ module csr_regfile import ariane_pkg::*; #(
+     // CSR write causes us to mark the FPU state as dirty
+     logic  dirty_fp_state_csr;
+     riscv::mstatus_rv_t    mstatus_q,  mstatus_d;
+-    riscv::xlen_t         mstatus_extended;
++     logic [riscv::XLEN-1:0]          mstatus_extended;
+     riscv::satp_t         satp_q, satp_d;
+     riscv::dcsr_t         dcsr_q,     dcsr_d;
+     riscv::csr_t  csr_addr;
+@@ -121,29 +121,29 @@ module csr_regfile import ariane_pkg::*; #(
+     logic        debug_mode_q, debug_mode_d;
+     logic        mtvec_rst_load_q;// used to determine whether we came out of reset
+ 
+-    riscv::xlen_t dpc_q,       dpc_d;
+-    riscv::xlen_t dscratch0_q, dscratch0_d;
+-    riscv::xlen_t dscratch1_q, dscratch1_d;
+-    riscv::xlen_t mtvec_q,     mtvec_d;
+-    riscv::xlen_t medeleg_q,   medeleg_d;
+-    riscv::xlen_t mideleg_q,   mideleg_d;
+-    riscv::xlen_t mip_q,       mip_d;
+-    riscv::xlen_t mie_q,       mie_d;
+-    riscv::xlen_t mcounteren_q,mcounteren_d;
+-    riscv::xlen_t mscratch_q,  mscratch_d;
+-    riscv::xlen_t mepc_q,      mepc_d;
+-    riscv::xlen_t mcause_q,    mcause_d;
+-    riscv::xlen_t mtval_q,     mtval_d;
+-
+-    riscv::xlen_t stvec_q,     stvec_d;
+-    riscv::xlen_t scounteren_q,scounteren_d;
+-    riscv::xlen_t sscratch_q,  sscratch_d;
+-    riscv::xlen_t sepc_q,      sepc_d;
+-    riscv::xlen_t scause_q,    scause_d;
+-    riscv::xlen_t stval_q,     stval_d;
+-    riscv::xlen_t dcache_q,    dcache_d;
+-    riscv::xlen_t icache_q,    icache_d;
+-    riscv::xlen_t acc_cons_q,  acc_cons_d;
++     logic [riscv::XLEN-1:0]  dpc_q,       dpc_d;
++     logic [riscv::XLEN-1:0]  dscratch0_q, dscratch0_d;
++     logic [riscv::XLEN-1:0]  dscratch1_q, dscratch1_d;
++     logic [riscv::XLEN-1:0]  mtvec_q,     mtvec_d;
++     logic [riscv::XLEN-1:0]  medeleg_q,   medeleg_d;
++     logic [riscv::XLEN-1:0]  mideleg_q,   mideleg_d;
++     logic [riscv::XLEN-1:0]  mip_q,       mip_d;
++     logic [riscv::XLEN-1:0]  mie_q,       mie_d;
++     logic [riscv::XLEN-1:0]  mcounteren_q,mcounteren_d;
++     logic [riscv::XLEN-1:0]  mscratch_q,  mscratch_d;
++     logic [riscv::XLEN-1:0]  mepc_q,      mepc_d;
++     logic [riscv::XLEN-1:0]  mcause_q,    mcause_d;
++     logic [riscv::XLEN-1:0]  mtval_q,     mtval_d;
++
++     logic [riscv::XLEN-1:0]  stvec_q,     stvec_d;
++     logic [riscv::XLEN-1:0]  scounteren_q,scounteren_d;
++     logic [riscv::XLEN-1:0]  sscratch_q,  sscratch_d;
++     logic [riscv::XLEN-1:0]  sepc_q,      sepc_d;
++     logic [riscv::XLEN-1:0]  scause_q,    scause_d;
++     logic [riscv::XLEN-1:0]  stval_q,     stval_d;
++     logic [riscv::XLEN-1:0]  dcache_q,    dcache_d;
++     logic [riscv::XLEN-1:0]  icache_q,    icache_d;
++     logic [riscv::XLEN-1:0]  acc_cons_q,  acc_cons_d;
+ 
+     logic        wfi_d,       wfi_q;
+ 
+@@ -469,11 +469,14 @@ module csr_regfile import ariane_pkg::*; #(
+     // ---------------------------
+     // CSR Write and update logic
+     // ---------------------------
+-    riscv::xlen_t mask;
++     logic [riscv::XLEN-1:0]  mask;
+     always_comb begin : csr_update
+         automatic riscv::satp_t satp;
+         automatic logic [63:0] instret;
++        automatic int index;
+ 
++        mask = '0;
++        index = '0;
+ 
+         satp = satp_q;
+         instret = instret_q;
+@@ -868,7 +871,7 @@ module csr_regfile import ariane_pkg::*; #(
+                 riscv::CSR_PMPADDR14,
+                 riscv::CSR_PMPADDR15:  begin
+                     // index is specified by the last byte in the address
+-                    automatic int index = csr_addr.csr_decode.address[3:0];
++                    index = csr_addr.csr_decode.address[3:0];
+                     // check if the entry or the entry above is locked
+                     if (!pmpcfg_q[index].locked && !(pmpcfg_q[index].locked && pmpcfg_q[index].addr_mode == riscv::TOR)) begin
+                         pmpaddr_d[index] = csr_wdata[riscv::PLEN-3:0];
+diff --git a/core/cva6.sv b/core/cva6.sv
+index ff75dceb..b16ce60b 100644
+--- a/core/cva6.sv
++++ b/core/cva6.sv
+@@ -22,97 +22,9 @@ module cva6 import ariane_pkg::*; #(
+     unsigned'(cva6_config_pkg::CVA6ConfigAxiIdWidth),     // AxiIdWidth
+     unsigned'(cva6_config_pkg::CVA6ConfigDataUserWidth)   // AxiUserWidth
+   },
+-  parameter type rvfi_instr_t = struct packed {
+-    logic [ariane_pkg::NRET-1:0]                  valid;
+-    logic [ariane_pkg::NRET*64-1:0]               order;
+-    logic [ariane_pkg::NRET*ariane_pkg::ILEN-1:0] insn;
+-    logic [ariane_pkg::NRET-1:0]                  trap;
+-    logic [ariane_pkg::NRET*riscv::XLEN-1:0]      cause;
+-    logic [ariane_pkg::NRET-1:0]                  halt;
+-    logic [ariane_pkg::NRET-1:0]                  intr;
+-    logic [ariane_pkg::NRET*2-1:0]                mode;
+-    logic [ariane_pkg::NRET*2-1:0]                ixl;
+-    logic [ariane_pkg::NRET*5-1:0]                rs1_addr;
+-    logic [ariane_pkg::NRET*5-1:0]                rs2_addr;
+-    logic [ariane_pkg::NRET*riscv::XLEN-1:0]      rs1_rdata;
+-    logic [ariane_pkg::NRET*riscv::XLEN-1:0]      rs2_rdata;
+-    logic [ariane_pkg::NRET*5-1:0]                rd_addr;
+-    logic [ariane_pkg::NRET*riscv::XLEN-1:0]      rd_wdata;
+-    logic [ariane_pkg::NRET*riscv::XLEN-1:0]      pc_rdata;
+-    logic [ariane_pkg::NRET*riscv::XLEN-1:0]      pc_wdata;
+-    logic [ariane_pkg::NRET*riscv::VLEN-1:0]      mem_addr;
+-    logic [ariane_pkg::NRET*riscv::PLEN-1:0]      mem_paddr;
+-    logic [ariane_pkg::NRET*(riscv::XLEN/8)-1:0]  mem_rmask;
+-    logic [ariane_pkg::NRET*(riscv::XLEN/8)-1:0]  mem_wmask;
+-    logic [ariane_pkg::NRET*riscv::XLEN-1:0]      mem_rdata;
+-    logic [ariane_pkg::NRET*riscv::XLEN-1:0]      mem_wdata;
+-  },
+-  // AXI types
+-  parameter type axi_ar_chan_t = struct packed {
+-        logic [CVA6Cfg.AxiIdWidth-1:0]       id;
+-        logic [CVA6Cfg.AxiAddrWidth-1:0]     addr;
+-        axi_pkg::len_t                       len;
+-        axi_pkg::size_t                      size;
+-        axi_pkg::burst_t                     burst;
+-        logic                                lock;
+-        axi_pkg::cache_t                     cache;
+-        axi_pkg::prot_t                      prot;
+-        axi_pkg::qos_t                       qos;
+-        axi_pkg::region_t                    region;
+-        logic [CVA6Cfg.AxiUserWidth-1:0]     user;
+-  },
+-  parameter type axi_aw_chan_t = struct packed {
+-        logic [CVA6Cfg.AxiIdWidth-1:0]       id;
+-        logic [CVA6Cfg.AxiAddrWidth-1:0]     addr;
+-        axi_pkg::len_t                       len;
+-        axi_pkg::size_t                      size;
+-        axi_pkg::burst_t                     burst;
+-        logic                                lock;
+-        axi_pkg::cache_t                     cache;
+-        axi_pkg::prot_t                      prot;
+-        axi_pkg::qos_t                       qos;
+-        axi_pkg::region_t                    region;
+-        axi_pkg::atop_t                      atop;
+-        logic [CVA6Cfg.AxiUserWidth-1:0]     user;
+-  },
+-  parameter type axi_w_chan_t = struct packed {
+-        logic [CVA6Cfg.AxiDataWidth-1:0]     data;
+-        logic [(CVA6Cfg.AxiDataWidth/8)-1:0] strb;
+-        logic                                last;
+-        logic [CVA6Cfg.AxiUserWidth-1:0]     user;
+-  },
+-  parameter type b_chan_t = struct packed {
+-        logic [CVA6Cfg.AxiIdWidth-1:0]       id;
+-        axi_pkg::resp_t                      resp;
+-        logic [CVA6Cfg.AxiUserWidth-1:0]     user;
+-  },
+-  parameter type r_chan_t = struct packed {
+-        logic [CVA6Cfg.AxiIdWidth-1:0]       id;
+-        logic [CVA6Cfg.AxiDataWidth-1:0]     data;
+-        axi_pkg::resp_t                      resp;
+-        logic                                last;
+-        logic [CVA6Cfg.AxiUserWidth-1:0]     user;
+-  },
+-  parameter type noc_req_t = struct packed {
+-        axi_aw_chan_t                aw;
+-        logic                        aw_valid;
+-        axi_w_chan_t                 w;
+-        logic                        w_valid;
+-        logic                        b_ready;
+-        axi_ar_chan_t                ar;
+-        logic                        ar_valid;
+-        logic                        r_ready;
+-  },
+-  parameter type noc_resp_t = struct packed {
+-        logic                        aw_ready;
+-        logic                        ar_ready;
+-        logic                        w_ready;
+-        logic                        b_valid;
+-        b_chan_t                     b;
+-        logic                        r_valid;
+-        r_chan_t                     r;
+-  },
+-  //
++  parameter type rvfi_instr_t  = rvfi_pkg::rvfi_instr_t,
++  parameter type noc_req_t = cva6_axi_pkg::noc_req_t,
++  parameter type noc_resp_t = cva6_axi_pkg::noc_resp_t,
+   parameter ariane_pkg::ariane_cfg_t ArianeCfg     = ariane_pkg::ArianeDefaultConfig,
+   parameter type      acc_cfg_t = logic,
+   parameter acc_cfg_t AccCfg    = '0,
+@@ -137,7 +49,10 @@ module cva6 import ariane_pkg::*; #(
+   input  cvxif_resp_t                  cvxif_resp_i,
+   // memory side
+   output noc_req_t                     noc_req_o,
+-  input  noc_resp_t                    noc_resp_i
++  input  noc_resp_t                    noc_resp_i,
++
++  input  logic                         enable_issue_i,
++  output logic                         issue_o
+ );
+ 
+   // ------------------------------------------
+@@ -149,7 +64,7 @@ module cva6 import ariane_pkg::*; #(
+   bp_resolve_t                resolved_branch;
+   logic [riscv::VLEN-1:0]     pc_commit;
+   logic                       eret;
+-  logic [CVA6Cfg.NrCommitPorts-1:0] commit_ack;
++  logic [cva6_config_pkg::CVA6ConfigNrCommitPorts-1:0] commit_ack;
+ 
+   localparam NumPorts = 3;
+   cvxif_pkg::cvxif_req_t      cvxif_req;
+@@ -188,7 +103,7 @@ module cva6 import ariane_pkg::*; #(
+   logic                     flu_ready_ex_id;
+   logic [TRANS_ID_BITS-1:0] flu_trans_id_ex_id;
+   logic                     flu_valid_ex_id;
+-  riscv::xlen_t             flu_result_ex_id;
++   logic [riscv::XLEN-1:0]              flu_result_ex_id;
+   exception_t               flu_exception_ex_id;
+   // ALU
+   logic                     alu_valid_id_ex;
+@@ -202,11 +117,11 @@ module cva6 import ariane_pkg::*; #(
+   logic                     lsu_ready_ex_id;
+ 
+   logic [TRANS_ID_BITS-1:0] load_trans_id_ex_id;
+-  riscv::xlen_t             load_result_ex_id;
++   logic [riscv::XLEN-1:0]              load_result_ex_id;
+   logic                     load_valid_ex_id;
+   exception_t               load_exception_ex_id;
+ 
+-  riscv::xlen_t             store_result_ex_id;
++   logic [riscv::XLEN-1:0]              store_result_ex_id;
+   logic [TRANS_ID_BITS-1:0] store_trans_id_ex_id;
+   logic                     store_valid_ex_id;
+   exception_t               store_exception_ex_id;
+@@ -218,7 +133,7 @@ module cva6 import ariane_pkg::*; #(
+   logic [1:0]               fpu_fmt_id_ex;
+   logic [2:0]               fpu_rm_id_ex;
+   logic [TRANS_ID_BITS-1:0] fpu_trans_id_ex_id;
+-  riscv::xlen_t             fpu_result_ex_id;
++   logic [riscv::XLEN-1:0]              fpu_result_ex_id;
+   logic                     fpu_valid_ex_id;
+   exception_t               fpu_exception_ex_id;
+   // Accelerator
+@@ -226,7 +141,7 @@ module cva6 import ariane_pkg::*; #(
+   scoreboard_entry_t        issue_instr_id_acc;
+   logic                     issue_instr_hs_id_acc;
+   logic [TRANS_ID_BITS-1:0] acc_trans_id_ex_id;
+-  riscv::xlen_t             acc_result_ex_id;
++   logic [riscv::XLEN-1:0]              acc_result_ex_id;
+   logic                     acc_valid_ex_id;
+   exception_t               acc_exception_ex_id;
+   logic                     halt_acc_ctrl;
+@@ -236,7 +151,7 @@ module cva6 import ariane_pkg::*; #(
+   logic                     csr_valid_id_ex;
+   // CVXIF
+   logic [TRANS_ID_BITS-1:0] x_trans_id_ex_id;
+-  riscv::xlen_t             x_result_ex_id;
++   logic [riscv::XLEN-1:0]              x_result_ex_id;
+   logic                     x_valid_ex_id;
+   exception_t               x_exception_ex_id;
+   logic                     x_we_ex_id;
+@@ -263,14 +178,14 @@ module cva6 import ariane_pkg::*; #(
+   // --------------
+   // ID <-> COMMIT
+   // --------------
+-  scoreboard_entry_t [CVA6Cfg.NrCommitPorts-1:0] commit_instr_id_commit;
++  scoreboard_entry_t [cva6_config_pkg::CVA6ConfigNrCommitPorts-1:0] commit_instr_id_commit;
+   // --------------
+   // COMMIT <-> ID
+   // --------------
+-  logic [CVA6Cfg.NrCommitPorts-1:0][4:0]  waddr_commit_id;
+-  logic [CVA6Cfg.NrCommitPorts-1:0][riscv::XLEN-1:0] wdata_commit_id;
+-  logic [CVA6Cfg.NrCommitPorts-1:0]       we_gpr_commit_id;
+-  logic [CVA6Cfg.NrCommitPorts-1:0]       we_fpr_commit_id;
++  logic [cva6_config_pkg::CVA6ConfigNrCommitPorts-1:0][4:0]  waddr_commit_id;
++  logic [cva6_config_pkg::CVA6ConfigNrCommitPorts-1:0][riscv::XLEN-1:0] wdata_commit_id;
++  logic [cva6_config_pkg::CVA6ConfigNrCommitPorts-1:0]       we_gpr_commit_id;
++  logic [cva6_config_pkg::CVA6ConfigNrCommitPorts-1:0]       we_fpr_commit_id;
+   // --------------
+   // CSR <-> *
+   // --------------
+@@ -288,8 +203,8 @@ module cva6 import ariane_pkg::*; #(
+   logic [ASID_WIDTH-1:0]    asid_csr_ex;
+   logic [11:0]              csr_addr_ex_csr;
+   fu_op                     csr_op_commit_csr;
+-  riscv::xlen_t             csr_wdata_commit_csr;
+-  riscv::xlen_t             csr_rdata_csr_commit;
++   logic [riscv::XLEN-1:0]              csr_wdata_commit_csr;
++   logic [riscv::XLEN-1:0]              csr_rdata_csr_commit;
+   exception_t               csr_exception_csr_commit;
+   logic                     tvm_csr_id;
+   logic                     tw_csr_id;
+@@ -308,7 +223,7 @@ module cva6 import ariane_pkg::*; #(
+   // Performance Counters <-> *
+   // ----------------------------
+   logic [11:0]              addr_csr_perf;
+-  riscv::xlen_t             data_csr_perf, data_perf_csr;
++   logic [riscv::XLEN-1:0]              data_csr_perf, data_perf_csr;
+   logic                     we_csr_perf;
+ 
+   logic                     icache_flush_ctrl_cache;
+@@ -393,6 +308,8 @@ module cva6 import ariane_pkg::*; #(
+     .fetch_entry_o       ( fetch_entry_if_id             ),
+     .fetch_entry_valid_o ( fetch_valid_if_id             ),
+     .fetch_entry_ready_i ( fetch_ready_id_if             ),
++    .enable_issue_i      ( enable_issue_i                ),
++    .issue_o             ( issue_o                       ),
+     .*
+   );
+ 
+@@ -1139,10 +1056,14 @@ module cva6 import ariane_pkg::*; #(
+ `endif // VERILATOR
+ //pragma translate_on
+ 
+-  if (CVA6Cfg.IsRVFI) begin
++  //if (CVA6Cfg.IsRVFI) begin
+     always_comb begin
+       for (int i = 0; i < CVA6Cfg.NrCommitPorts; i++) begin
+         logic exception, mem_exception;
++		logic [7:0] rvfi_op;
++		logic pc_wdata_source;
++		rvfi_op = commit_instr_id_commit[i].op;
++		pc_wdata_source = (((rvfi_op >= 81 && rvfi_op <= 84) || (rvfi_op >= 89 && rvfi_op <= 98) || (rvfi_op == 100) || (rvfi_op == 101) || (rvfi_op == 102) || (rvfi_op == 104) || (rvfi_op >= 107 && rvfi_op <= 111) || (rvfi_op >= 118 && rvfi_op <= 121) || (rvfi_op == 168)) && araine_pkg::FP_PRESENT) == 1;
+         exception = commit_instr_id_commit[i].valid && ex_commit.valid;
+         mem_exception = exception &&
+           (ex_commit.cause == riscv::INSTR_ADDR_MISALIGNED ||
+@@ -1169,7 +1090,7 @@ module cva6 import ariane_pkg::*; #(
+         rvfi_o[i].rs1_addr = commit_instr_id_commit[i].rs1[4:0];
+         rvfi_o[i].rs2_addr = commit_instr_id_commit[i].rs2[4:0];
+         rvfi_o[i].rd_addr  = commit_instr_id_commit[i].rd[4:0];
+-        rvfi_o[i].rd_wdata = ariane_pkg::is_rd_fpr(commit_instr_id_commit[i].op) == 0 ? wdata_commit_id[i] : commit_instr_id_commit[i].result;
++        rvfi_o[i].rd_wdata = pc_wdata_source == 0 ? wdata_commit_id[i] : commit_instr_id_commit[i].result;
+         rvfi_o[i].pc_rdata = commit_instr_id_commit[i].pc;
+ 
+         rvfi_o[i].mem_addr  = commit_instr_id_commit[i].lsu_addr;
+@@ -1184,6 +1105,6 @@ module cva6 import ariane_pkg::*; #(
+ 
+       end
+     end
+-  end
++  //end
+ 
+ endmodule // ariane
+diff --git a/core/cvxif_fu.sv b/core/cvxif_fu.sv
+index 11d4838e..b6ed33bc 100644
+--- a/core/cvxif_fu.sv
++++ b/core/cvxif_fu.sv
+@@ -24,7 +24,7 @@ module cvxif_fu import ariane_pkg::*; #(
+     //to writeback
+     output logic [TRANS_ID_BITS-1:0]          x_trans_id_o,
+     output exception_t                        x_exception_o,
+-    output riscv::xlen_t                      x_result_o,
++    output  logic [riscv::XLEN-1:0]                       x_result_o,
+     output logic                              x_valid_o,
+     output logic                              x_we_o,
+     //to coprocessor
+diff --git a/core/decoder.sv b/core/decoder.sv
+index 86dd567e..58524363 100644
+--- a/core/decoder.sv
++++ b/core/decoder.sv
+@@ -62,12 +62,12 @@ module decoder import ariane_pkg::*; #(
+         NOIMM, IIMM, SIMM, SBIMM, UIMM, JIMM, RS3
+     } imm_select;
+ 
+-    riscv::xlen_t imm_i_type;
+-    riscv::xlen_t imm_s_type;
+-    riscv::xlen_t imm_sb_type;
+-    riscv::xlen_t imm_u_type;
+-    riscv::xlen_t imm_uj_type;
+-    riscv::xlen_t imm_bi_type;
++     logic [riscv::XLEN-1:0]  imm_i_type;
++     logic [riscv::XLEN-1:0]  imm_s_type;
++     logic [riscv::XLEN-1:0]  imm_sb_type;
++     logic [riscv::XLEN-1:0]  imm_u_type;
++     logic [riscv::XLEN-1:0]  imm_uj_type;
++     logic [riscv::XLEN-1:0]  imm_bi_type;
+ 
+     // ---------------------------------------
+     // Accelerator instructions' first-pass decoder
+@@ -494,10 +494,13 @@ module decoder import ariane_pkg::*; #(
+ 
+                             // check rounding mode
+                             if (check_fprm) begin
++                                if (frm_i[2] == 1'b1 && (frm_i[1] == 1'b1 || frm_i[0] == 1'b1)) illegal_instr = 1'b1;
++                                /*
+                                 unique case (frm_i) inside // actual rounding mode from frm csr
+                                     [3'b000:3'b100]: ; //legal rounding modes
+                                     default : illegal_instr = 1'b1;
+                                 endcase
++                                */
+                             end
+ 
+                         end else begin // No vectorial FP enabled (static)
+@@ -889,25 +892,26 @@ module decoder import ariane_pkg::*; #(
+ 
+                         // check rounding mode
+                         if (check_fprm) begin
+-                            unique case (instr.rftype.rm) inside
+-                                [3'b000:3'b100]: ; //legal rounding modes
+-                                3'b101: begin      // Alternative Half-Precsision encded as fmt=10 and rm=101
+-                                    if (~XF16ALT || instr.rftype.fmt != 2'b10)
+-                                        illegal_instr = 1'b1;
+-                                    unique case (frm_i) inside // actual rounding mode from frm csr
+-                                        [3'b000:3'b100]: ; //legal rounding modes
+-                                        default : illegal_instr = 1'b1;
+-                                    endcase
+-                                end
+-                                3'b111: begin
+-                                    // rounding mode from frm csr
+-                                    unique case (frm_i) inside
+-                                        [3'b000:3'b100]: ; //legal rounding modes
+-                                        default : illegal_instr = 1'b1;
+-                                    endcase
+-                                end
+-                                default : illegal_instr = 1'b1;
+-                            endcase
++                           if (instr.rftype.rm == 3'b101) begin      // Alternative Half-Precsision encded as fmt=10 and rm=101
++                              if (~XF16ALT || instr.rftype.fmt != 2'b10)
++                                 illegal_instr = 1'b1;
++                              if (frm_i[2] == 1'b1 && (frm_i[1] == 1'b1 || frm_i[0] == 1'b1)) illegal_instr = 1'b1;
++                                 /*
++                                 unique case (frm_i) inside // actual rounding mode from frm csr
++                                    [3'b000:3'b100]: ; //legal rounding modes
++                                    default : illegal_instr = 1'b1;
++                                 endcase
++                                 */
++                           end else if (instr.rftype.rm == 3'b111) begin
++                              // rounding mode from frm csr
++                              if (frm_i[2] == 1'b1 && (frm_i[1] == 1'b1 || frm_i[0] == 1'b1)) illegal_instr = 1'b1;
++                                 /*
++                                 unique case (frm_i) inside
++                                    [3'b000:3'b100]: ; //legal rounding modes
++                                    default : illegal_instr = 1'b1;
++                                 endcase
++                                 */
++                           end
+                         end
+                     end else begin
+                         illegal_instr = 1'b1;
+@@ -1036,25 +1040,26 @@ module decoder import ariane_pkg::*; #(
+ 
+                         // check rounding mode
+                         if (check_fprm) begin
+-                            unique case (instr.rftype.rm) inside
+-                                [3'b000:3'b100]: ; //legal rounding modes
+-                                3'b101: begin      // Alternative Half-Precsision encded as fmt=10 and rm=101
++                             if (instr.rftype.rm == 3'b101) begin      // Alternative Half-Precsision encded as fmt=10 and rm=101
+                                     if (~XF16ALT || instr.rftype.fmt != 2'b10)
+                                         illegal_instr = 1'b1;
++                                    if (frm_i[2] == 1'b1 && (frm_i[1] == 1'b1 || frm_i[0] == 1'b1)) illegal_instr = 1'b1;
++                                    /*
+                                     unique case (frm_i) inside // actual rounding mode from frm csr
+                                         [3'b000:3'b100]: ; //legal rounding modes
+                                         default : illegal_instr = 1'b1;
+                                     endcase
+-                                end
+-                                3'b111: begin
++                                    */
++                                end else if (instr.rftype.rm == 3'b111) begin
+                                     // rounding mode from frm csr
++                                    if (frm_i[2] == 1'b1 && (frm_i[1] == 1'b1 || frm_i[0] == 1'b1)) illegal_instr = 1'b1;
++                                    /*
+                                     unique case (frm_i) inside
+                                         [3'b000:3'b100]: ; //legal rounding modes
+                                         default : illegal_instr = 1'b1;
+                                     endcase
+-                                end
+-                                default : illegal_instr = 1'b1;
+-                            endcase
++                                    */
++                               end
+                         end
+                     end else begin
+                         illegal_instr = 1'b1;
+@@ -1256,7 +1261,7 @@ module decoder import ariane_pkg::*; #(
+     // ---------------------
+     // Exception handling
+     // ---------------------
+-    riscv::xlen_t interrupt_cause;
++     logic [riscv::XLEN-1:0]  interrupt_cause;
+ 
+     // this instruction has already executed if the exception is valid
+     assign instruction_o.valid   = instruction_o.ex.valid;
+diff --git a/core/ex_stage.sv b/core/ex_stage.sv
+index 59d54232..4ad00936 100644
+--- a/core/ex_stage.sv
++++ b/core/ex_stage.sv
+@@ -31,7 +31,7 @@ module ex_stage import ariane_pkg::*; #(
+     input  logic                                   is_compressed_instr_i, // we need to know if this was a compressed instruction
+                                                                           // in order to calculate the next PC on a mis-predict
+     // Fixed latency unit(s)
+-    output riscv::xlen_t                           flu_result_o,
++    output  logic [riscv::XLEN-1:0]                            flu_result_o,
+     output logic [TRANS_ID_BITS-1:0]               flu_trans_id_o,        // ID of scoreboard entry at which to write back
+     output exception_t                             flu_exception_o,
+     output logic                                   flu_ready_o,           // FLU is ready
+@@ -55,11 +55,11 @@ module ex_stage import ariane_pkg::*; #(
+     input  logic                                   lsu_valid_i,        // Input is valid
+ 
+     output logic                                   load_valid_o,
+-    output riscv::xlen_t                           load_result_o,
++    output  logic [riscv::XLEN-1:0]                            load_result_o,
+     output logic [TRANS_ID_BITS-1:0]               load_trans_id_o,
+     output exception_t                             load_exception_o,
+     output logic                                   store_valid_o,
+-    output riscv::xlen_t                           store_result_o,
++    output  logic [riscv::XLEN-1:0]                            store_result_o,
+     output logic [TRANS_ID_BITS-1:0]               store_trans_id_o,
+     output exception_t                             store_exception_o,
+ 
+@@ -77,7 +77,7 @@ module ex_stage import ariane_pkg::*; #(
+     input  logic [2:0]                             fpu_frm_i,        // FP frm csr
+     input  logic [6:0]                             fpu_prec_i,       // FP precision control
+     output logic [TRANS_ID_BITS-1:0]               fpu_trans_id_o,
+-    output riscv::xlen_t                           fpu_result_o,
++    output  logic [riscv::XLEN-1:0]                            fpu_result_o,
+     output logic                                   fpu_valid_o,
+     output exception_t                             fpu_exception_o,
+     // CoreV-X-Interface
+@@ -86,7 +86,7 @@ module ex_stage import ariane_pkg::*; #(
+     input  logic [31:0]                            x_off_instr_i,
+     output logic [TRANS_ID_BITS-1:0]               x_trans_id_o,
+     output exception_t                             x_exception_o,
+-    output riscv::xlen_t                           x_result_o,
++    output  logic [riscv::XLEN-1:0]                            x_result_o,
+     output logic                                   x_valid_o,
+     output logic                                   x_we_o,
+     output cvxif_pkg::cvxif_req_t                  cvxif_req_o,
+@@ -158,7 +158,7 @@ module ex_stage import ariane_pkg::*; #(
+ 
+     // from ALU to branch unit
+     logic alu_branch_res; // branch comparison result
+-    riscv::xlen_t alu_result, csr_result, mult_result;
++     logic [riscv::XLEN-1:0]  alu_result, csr_result, mult_result;
+     logic [riscv::VLEN-1:0] branch_result;
+     logic csr_ready, mult_ready;
+     logic [TRANS_ID_BITS-1:0] mult_trans_id;
+diff --git a/core/frontend/bht.sv b/core/frontend/bht.sv
+index 0c4f1c10..58245bc3 100644
+--- a/core/frontend/bht.sv
++++ b/core/frontend/bht.sv
+@@ -42,11 +42,14 @@ module bht #(
+     localparam PREDICTION_BITS = $clog2(NR_ROWS) + OFFSET + ROW_ADDR_BITS;
+     // we are not interested in all bits of the address
+     unread i_unread (.d_i(|vpc_i));
+-
++/*
+     struct packed {
+         logic       valid;
+         logic [1:0] saturation_counter;
+     } bht_d[NR_ROWS-1:0][ariane_pkg::INSTR_PER_FETCH-1:0], bht_q[NR_ROWS-1:0][ariane_pkg::INSTR_PER_FETCH-1:0];
++*/
++    logic [(NR_ROWS * ariane_pkg::INSTR_PER_FETCH * 3)-1:0] bht_d;
++    logic [(NR_ROWS * ariane_pkg::INSTR_PER_FETCH * 3)-1:0] bht_q;
+ 
+     logic [$clog2(NR_ROWS)-1:0]  index, update_pc;
+     logic [ROW_INDEX_BITS-1:0]   update_row_index;
+@@ -64,49 +67,53 @@ module bht #(
+       logic [1:0] saturation_counter;
+       // prediction assignment
+       for (genvar i = 0; i < ariane_pkg::INSTR_PER_FETCH; i++) begin : gen_bht_output
+-        assign bht_prediction_o[i].valid = bht_q[index][i].valid;
+-        assign bht_prediction_o[i].taken = bht_q[index][i].saturation_counter[1] == 1'b1;
++        assign bht_prediction_o[i].valid = bht_q[(index * ariane_pkg::INSTR_PER_FETCH * 3) + (i * 3) + 0];
++        assign bht_prediction_o[i].taken = bht_q[(index * ariane_pkg::INSTR_PER_FETCH * 3) + (i * 3) + 2] == 1'b1;
+       end
+ 
+       always_comb begin : update_bht
+         bht_d = bht_q;
+-        saturation_counter = bht_q[update_pc][update_row_index].saturation_counter;
++        saturation_counter = bht_q[(update_pc * ariane_pkg::INSTR_PER_FETCH * 3) + (update_row_index * 3) + 1 +: 2];
+ 
+         if (bht_update_i.valid && !debug_mode_i) begin
+-          bht_d[update_pc][update_row_index].valid = 1'b1;
++          bht_d[(update_pc * ariane_pkg::INSTR_PER_FETCH * 3) + (update_row_index * 3) + 0] = 1'b1;
+ 
+           if (saturation_counter == 2'b11) begin
+             // we can safely decrease it
+             if (!bht_update_i.taken)
+-              bht_d[update_pc][update_row_index].saturation_counter = saturation_counter - 1;
++              bht_d[(update_pc * ariane_pkg::INSTR_PER_FETCH * 3) + (update_row_index * 3) + 1 +:2] = saturation_counter - 1;
+           // then check if it saturated in the negative regime e.g.: branch not taken
+           end else if (saturation_counter == 2'b00) begin
+             // we can safely increase it
+             if (bht_update_i.taken)
+-              bht_d[update_pc][update_row_index].saturation_counter = saturation_counter + 1;
++              bht_d[(update_pc * ariane_pkg::INSTR_PER_FETCH * 3) + (update_row_index * 3) + 1 +:2] = saturation_counter + 1;
+           end else begin // otherwise we are not in any boundaries and can decrease or increase it
+             if (bht_update_i.taken)
+-              bht_d[update_pc][update_row_index].saturation_counter = saturation_counter + 1;
++              bht_d[(update_pc * ariane_pkg::INSTR_PER_FETCH * 3) + (update_row_index * 3) + 1 +:2] = saturation_counter + 1;
+             else
+-              bht_d[update_pc][update_row_index].saturation_counter = saturation_counter - 1;
++              bht_d[(update_pc * ariane_pkg::INSTR_PER_FETCH * 3) + (update_row_index * 3) + 1 +:2] = saturation_counter - 1;
+           end
+         end
+       end
+ 
+       always_ff @(posedge clk_i or negedge rst_ni) begin
+         if (!rst_ni) begin
++          bht_q <= '0;
++          /*
+           for (int unsigned i = 0; i < NR_ROWS; i++) begin
+             for (int j = 0; j < ariane_pkg::INSTR_PER_FETCH; j++) begin
+               bht_q[i][j] <= '0;
+             end
+           end
++          */
+         end else begin
+           // evict all entries
+           if (flush_i) begin
+             for (int i = 0; i < NR_ROWS; i++) begin
+               for (int j = 0; j < ariane_pkg::INSTR_PER_FETCH; j++) begin
+-                bht_q[i][j].valid <=  1'b0;
+-                bht_q[i][j].saturation_counter <= 2'b10;
++                bht_q[(i * ariane_pkg::INSTR_PER_FETCH * 3) + (j * 3) + 0] <=  1'b0;
++                bht_q[(i * ariane_pkg::INSTR_PER_FETCH * 3) + (j * 3) + 1] <=  1'b0;
++                bht_q[(i * ariane_pkg::INSTR_PER_FETCH * 3) + (j * 3) + 2] <=  1'b1;
+               end
+             end
+           end else begin
+diff --git a/core/frontend/btb.sv b/core/frontend/btb.sv
+index 8ca32753..821946d6 100644
+--- a/core/frontend/btb.sv
++++ b/core/frontend/btb.sv
+@@ -138,12 +138,12 @@ module btb #(
+ 
+       // typedef for all branch target entries
+       // we may want to try to put a tag field that fills the rest of the PC in-order to mitigate aliasing effects
+-      ariane_pkg::btb_prediction_t btb_d [NR_ROWS-1:0][ariane_pkg::INSTR_PER_FETCH-1:0],
+-                                   btb_q [NR_ROWS-1:0][ariane_pkg::INSTR_PER_FETCH-1:0];
++      ariane_pkg::btb_prediction_t [(NR_ROWS * ariane_pkg::INSTR_PER_FETCH) - 1:0] btb_d;
++      ariane_pkg::btb_prediction_t [(NR_ROWS * ariane_pkg::INSTR_PER_FETCH) - 1:0] btb_q;
+ 
+       // output matching prediction
+       for (genvar i = 0; i < ariane_pkg::INSTR_PER_FETCH; i++) begin : gen_btb_output
+-        assign btb_prediction_o[i] = btb_q[index][i]; // workaround
++        assign btb_prediction_o[i] = btb_q[(index * ariane_pkg::INSTR_PER_FETCH) + i]; // workaround
+       end
+ 
+       // -------------------------
+@@ -154,9 +154,9 @@ module btb #(
+         btb_d = btb_q;
+ 
+         if (btb_update_i.valid && !debug_mode_i) begin
+-          btb_d[update_pc][update_row_index].valid = 1'b1;
++          btb_d[(update_pc * ariane_pkg::INSTR_PER_FETCH) + update_row_index].valid = 1'b1;
+           // the target address is simply updated
+-          btb_d[update_pc][update_row_index].target_address = btb_update_i.target_address;
++          btb_d[(update_pc * ariane_pkg::INSTR_PER_FETCH) + update_row_index].target_address = btb_update_i.target_address;
+         end
+       end
+ 
+@@ -165,13 +165,13 @@ module btb #(
+         if (!rst_ni) begin
+           // Bias the branches to be taken upon first arrival
+           for (int i = 0; i < NR_ROWS; i++)
+-            btb_q[i] <= '{default: 0};
++            btb_q[i * ariane_pkg::INSTR_PER_FETCH] <= '{default: 0};
+         end else begin
+           // evict all entries
+           if (flush_i) begin
+             for (int i = 0; i < NR_ROWS; i++) begin
+               for (int j = 0; j < ariane_pkg::INSTR_PER_FETCH; j++) begin
+-                btb_q[i][j].valid <=  1'b0;
++                btb_q[(i * ariane_pkg::INSTR_PER_FETCH) + j].valid <=  1'b0;
+               end
+             end
+           end else begin
+diff --git a/core/frontend/frontend.sv b/core/frontend/frontend.sv
+index c4293833..ee5e40da 100644
+--- a/core/frontend/frontend.sv
++++ b/core/frontend/frontend.sv
+@@ -45,7 +45,10 @@ module frontend import ariane_pkg::*; #(
+   // instruction output port -> to processor back-end
+   output fetch_entry_t       fetch_entry_o,       // fetch entry containing all relevant data for the ID stage
+   output logic               fetch_entry_valid_o, // instruction in IF is valid
+-  input  logic               fetch_entry_ready_i  // ID acknowledged this instruction
++  input  logic               fetch_entry_ready_i,  // ID acknowledged this instruction
++
++  input  logic               enable_issue_i,
++  output logic               issue_o
+ );
+     // Instruction Cache Registers, from I$
+     logic [FETCH_WIDTH-1:0] icache_data_q;
+@@ -132,15 +135,15 @@ module frontend import ariane_pkg::*; #(
+     // select the right branch prediction result
+     // in case we are serving an unaligned instruction in instr[0] we need to take
+     // the prediction we saved from the previous fetch
+-    assign bht_prediction_shifted[0] = (serving_unaligned) ? bht_q : bht_prediction[addr[0][1]];
+-    assign btb_prediction_shifted[0] = (serving_unaligned) ? btb_q : btb_prediction[addr[0][1]];
++    assign bht_prediction_shifted[0] = (serving_unaligned) ? bht_q : bht_prediction[((addr[0] & 2'b10) >> 1)];
++    assign btb_prediction_shifted[0] = (serving_unaligned) ? btb_q : btb_prediction[((addr[0] & 2'b10) >> 1)];
+ 
+     if (ariane_pkg::RVC) begin : gen_btb_prediction_shifted
+       // for all other predictions we can use the generated address to index
+       // into the branch prediction data structures
+       for (genvar i = 1; i < INSTR_PER_FETCH; i++) begin : gen_prediction_address
+-        assign bht_prediction_shifted[i] = bht_prediction[addr[i][$clog2(INSTR_PER_FETCH):1]];
+-        assign btb_prediction_shifted[i] = btb_prediction[addr[i][$clog2(INSTR_PER_FETCH):1]];
++        assign bht_prediction_shifted[i] = bht_prediction[(addr[i] & (('b100 << $clog2(INSTR_PER_FETCH)) - 2)) >> 1];
++        assign btb_prediction_shifted[i] = btb_prediction[(addr[i] & (('b100 << $clog2(INSTR_PER_FETCH)) - 2)) >> 1];
+       end
+     end;
+ 
+@@ -483,7 +486,9 @@ module frontend import ariane_pkg::*; #(
+       .replay_addr_o       ( replay_addr          ),
+       .fetch_entry_o       ( fetch_entry_o        ), // to back-end
+       .fetch_entry_valid_o ( fetch_entry_valid_o  ), // to back-end
+-      .fetch_entry_ready_i ( fetch_entry_ready_i  )  // to back-end
++      .fetch_entry_ready_i ( fetch_entry_ready_i  ), // to back-end
++      .enable_issue_i      ( enable_issue_i       ),
++      .issue_o             ( issue_o              )
+     );
+ 
+     // pragma translate_off
+diff --git a/core/frontend/instr_queue.sv b/core/frontend/instr_queue.sv
+index 7b1e6ea7..2fab5a62 100644
+--- a/core/frontend/instr_queue.sv
++++ b/core/frontend/instr_queue.sv
+@@ -66,7 +66,10 @@ module instr_queue import ariane_pkg::*; #(
+   // to processor backend
+   output ariane_pkg::fetch_entry_t                           fetch_entry_o,
+   output logic                                               fetch_entry_valid_o,
+-  input  logic                                               fetch_entry_ready_i
++  input  logic                                               fetch_entry_ready_i,
++
++  input  logic                                               enable_issue_i,
++  output logic                                               issue_o
+ );
+ 
+   typedef struct packed {
+@@ -119,6 +122,8 @@ module instr_queue import ariane_pkg::*; #(
+   // replay interface
+   logic [ariane_pkg::INSTR_PER_FETCH-1:0] instr_overflow_fifo;
+ 
++  assign issue_o = (|pop_instr);
++
+   assign ready_o = ~(|instr_queue_full) & ~full_address;
+ 
+   if (ariane_pkg::RVC) begin : gen_multiple_instr_per_fetch_with_C
+@@ -282,6 +287,7 @@ module instr_queue import ariane_pkg::*; #(
+           fetch_entry_o.ex.tval  = {{64-riscv::VLEN{1'b0}}, instr_data_out[i].ex_vaddr};
+           fetch_entry_o.branch_predict.cf = instr_data_out[i].cf;
+           pop_instr[i] = fetch_entry_valid_o & fetch_entry_ready_i;
++          pop_instr[i] = pop_instr[i] && enable_issue_i;
+         end
+       end
+       // rotate the pointer left
+@@ -308,6 +314,7 @@ module instr_queue import ariane_pkg::*; #(
+       fetch_entry_o.branch_predict.cf = instr_data_out[0].cf;
+ 
+       pop_instr[0] = fetch_entry_valid_o & fetch_entry_ready_i;
++      pop_instr[0] = pop_instr[0] && enable_issue_i;
+     end
+   end
+ 
+@@ -348,7 +355,7 @@ module instr_queue import ariane_pkg::*; #(
+     assign push_instr_fifo[i] = push_instr[i] & ~address_overflow;
+     fifo_v3 #(
+       .DEPTH      ( ariane_pkg::FETCH_FIFO_DEPTH ),
+-      .dtype      ( instr_data_t                 )
++      .DATA_WIDTH ( $bits(instr_data_t)          )
+     ) i_fifo_instr_data (
+       .clk_i      ( clk_i                ),
+       .rst_ni     ( rst_ni               ),
+diff --git a/core/include/acc_pkg.sv b/core/include/acc_pkg.sv
+index bcd3c70a..a0e8cf0e 100644
+--- a/core/include/acc_pkg.sv
++++ b/core/include/acc_pkg.sv
+@@ -17,8 +17,8 @@ package acc_pkg;
+     logic                                 req_valid;
+     logic                                 resp_ready;
+     riscv::instruction_t                  insn;
+-    riscv::xlen_t                         rs1;
+-    riscv::xlen_t                         rs2;
++     logic [riscv::XLEN-1:0]                          rs1;
++     logic [riscv::XLEN-1:0]                          rs2;
+     fpnew_pkg::roundmode_e                frm;
+     logic [ariane_pkg::TRANS_ID_BITS-1:0] trans_id;
+     logic                                 store_pending;
+@@ -30,7 +30,7 @@ package acc_pkg;
+   typedef struct packed {
+     logic                                 req_ready;
+     logic                                 resp_valid;
+-    riscv::xlen_t                         result;
++     logic [riscv::XLEN-1:0]                          result;
+     logic [ariane_pkg::TRANS_ID_BITS-1:0] trans_id;
+     logic                                 error;
+     // Metadata
+diff --git a/core/include/ariane_pkg.sv b/core/include/ariane_pkg.sv
+index d1c12728..d36fe2f5 100644
+--- a/core/include/ariane_pkg.sv
++++ b/core/include/ariane_pkg.sv
+@@ -227,10 +227,10 @@ package ariane_pkg;
+     // ^^^^ until here ^^^^
+     // ---------------------
+ 
+-    localparam riscv::xlen_t OPENHWGROUP_MVENDORID = {{riscv::XLEN-32{1'b0}}, 32'h0602};
+-    localparam riscv::xlen_t ARIANE_MARCHID = {{riscv::XLEN-32{1'b0}}, 32'd3};
++    localparam  logic [riscv::XLEN-1:0]  OPENHWGROUP_MVENDORID = {{riscv::XLEN-32{1'b0}}, 32'h0602};
++    localparam  logic [riscv::XLEN-1:0]  ARIANE_MARCHID = {{riscv::XLEN-32{1'b0}}, 32'd3};
+ 
+-    localparam riscv::xlen_t ISA_CODE = (riscv::XLEN'(RVA) <<  0)                         // A - Atomic Instructions extension
++    localparam  logic [riscv::XLEN-1:0]  ISA_CODE = (riscv::XLEN'(RVA) <<  0)                         // A - Atomic Instructions extension
+                                       | (riscv::XLEN'(RVC) <<  2)                         // C - Compressed extension
+                                       | (riscv::XLEN'(RVD) <<  3)                         // D - Double precsision floating-point extension
+                                       | (riscv::XLEN'(RVF) <<  5)                         // F - Single precsision floating-point extension
+@@ -338,8 +338,8 @@ package ariane_pkg;
+     // Only use struct when signals have same direction
+     // exception
+     typedef struct packed {
+-         riscv::xlen_t       cause; // cause of exception
+-         riscv::xlen_t       tval;  // additional information of causing exception (e.g.: instruction causing it),
++          logic [riscv::XLEN-1:0]        cause; // cause of exception
++          logic [riscv::XLEN-1:0]        tval;  // additional information of causing exception (e.g.: instruction causing it),
+                              // address of LD/ST fault
+          logic        valid;
+     } exception_t;
+@@ -427,9 +427,9 @@ package ariane_pkg;
+     // All information needed to determine whether we need to associate an interrupt
+     // with the corresponding instruction or not.
+     typedef struct packed {
+-      riscv::xlen_t       mie;
+-      riscv::xlen_t       mip;
+-      riscv::xlen_t       mideleg;
++       logic [riscv::XLEN-1:0]        mie;
++       logic [riscv::XLEN-1:0]        mip;
++       logic [riscv::XLEN-1:0]        mideleg;
+       logic        sie;
+       logic        global_enable;
+     } irq_ctrl_t;
+@@ -519,7 +519,7 @@ package ariane_pkg;
+                                // shifts
+                                SRA, SRL, SLL, SRLW, SLLW, SRAW,
+                                // comparisons
+-                               LTS, LTU, GES, GEU, EQ, NE,
++                               LTS = 13, LTU = 14, GES = 15, GEU = 16, EQ = 17, NE = 18,
+                                // jumps
+                                JALR, BRANCH,
+                                // set lower than operations
+@@ -527,17 +527,17 @@ package ariane_pkg;
+                                // CSR functions
+                                MRET, SRET, DRET, ECALL, WFI, FENCE, FENCE_I, SFENCE_VMA, CSR_WRITE, CSR_READ, CSR_SET, CSR_CLEAR,
+                                // LSU functions
+-                               LD, SD, LW, LWU, SW, LH, LHU, SH, LB, SB, LBU,
++                               LD = 35, SD = 36, LW = 37, LWU = 38, SW = 39, LH = 40, LHU = 41, SH = 42, LB = 43, SB = 44, LBU = 45,
+                                // Atomic Memory Operations
+-                               AMO_LRW, AMO_LRD, AMO_SCW, AMO_SCD,
+-                               AMO_SWAPW, AMO_ADDW, AMO_ANDW, AMO_ORW, AMO_XORW, AMO_MAXW, AMO_MAXWU, AMO_MINW, AMO_MINWU,
+-                               AMO_SWAPD, AMO_ADDD, AMO_ANDD, AMO_ORD, AMO_XORD, AMO_MAXD, AMO_MAXDU, AMO_MIND, AMO_MINDU,
++                               AMO_LRW = 46, AMO_LRD = 47, AMO_SCW = 48, AMO_SCD = 49,
++                               AMO_SWAPW = 50, AMO_ADDW = 51, AMO_ANDW = 52, AMO_ORW = 53, AMO_XORW = 54, AMO_MAXW = 55, AMO_MAXWU = 56, AMO_MINW = 57, AMO_MINWU = 58,
++                               AMO_SWAPD = 59, AMO_ADDD = 60, AMO_ANDD = 61, AMO_ORD = 62, AMO_XORD = 63, AMO_MAXD = 64, AMO_MAXDU = 65, AMO_MIND = 66, AMO_MINDU = 67,
+                                // Multiplications
+                                MUL, MULH, MULHU, MULHSU, MULW,
+                                // Divisions
+                                DIV, DIVU, DIVW, DIVUW, REM, REMU, REMW, REMUW,
+                                // Floating-Point Load and Store Instructions
+-                               FLD, FLW, FLH, FLB, FSD, FSW, FSH, FSB,
++                               FLD = 81, FLW = 82, FLH = 83, FLB = 84, FSD = 85, FSW = 86, FSH = 87, FSB = 88,
+                                // Floating-Point Computational Instructions
+                                FADD, FSUB, FMUL, FDIV, FMIN_MAX, FSQRT, FMADD, FMSUB, FNMSUB, FNMADD,
+                                // Floating-Point Conversion and Move Instructions
+@@ -579,17 +579,23 @@ package ariane_pkg;
+     typedef struct packed {
+         fu_t                      fu;
+         fu_op                     operation;
+-        riscv::xlen_t             operand_a;
+-        riscv::xlen_t             operand_b;
+-        riscv::xlen_t             imm;
++         logic [riscv::XLEN-1:0]              operand_a;
++         logic [riscv::XLEN-1:0]              operand_b;
++         logic [riscv::XLEN-1:0]              imm;
+         logic [TRANS_ID_BITS-1:0] trans_id;
+     } fu_data_t;
+ 
+     function automatic logic op_is_branch (input fu_op op);
++        if (op == 17 || op == 18 || op == 13 || op == 15 || op == 14 || op == 16)
++            return 1'b1;
++        else
++            return 1'b0;
++        /*
+         unique case (op) inside
+             EQ, NE, LTS, GES, LTU, GEU: return 1'b1;
+             default                   : return 1'b0; // all other ops
+         endcase
++        */
+     endfunction
+ 
+     // -------------------------------
+@@ -673,7 +679,7 @@ package ariane_pkg;
+         logic                           valid;
+         logic [riscv::VLEN-1:0]         vaddr;
+         logic                           overflow;
+-        riscv::xlen_t                   data;
++         logic [riscv::XLEN-1:0]                    data;
+         logic [(riscv::XLEN/8)-1:0]     be;
+         fu_t                            fu;
+         fu_op                           operation;
+@@ -706,7 +712,7 @@ package ariane_pkg;
+         logic [REG_ADDR_SIZE-1:0] rs1;           // register source address 1
+         logic [REG_ADDR_SIZE-1:0] rs2;           // register source address 2
+         logic [REG_ADDR_SIZE-1:0] rd;            // register destination address
+-        riscv::xlen_t             result;        // for unfinished instructions this field also holds the immediate,
++         logic [riscv::XLEN-1:0]              result;        // for unfinished instructions this field also holds the immediate,
+                                                  // for unfinished floating-point that are partly encoded in rs2, this field also holds rs2
+                                                  // for unfinished floating-point fused operations (FMADD, FMSUB, FNMADD, FNMSUB)
+                                                  // this field holds the address of the third operand from the floating-point register file
+@@ -718,12 +724,12 @@ package ariane_pkg;
+         branchpredict_sbe_t       bp;            // branch predict scoreboard data structure
+         logic                     is_compressed; // signals a compressed instructions, we need this information at the commit stage if
+                                                  // we want jump accordingly e.g.: +4, +2
+-        riscv::xlen_t               rs1_rdata;   // information needed by RVFI
+-        riscv::xlen_t               rs2_rdata;   // information needed by RVFI
++         logic [riscv::XLEN-1:0]                rs1_rdata;   // information needed by RVFI
++         logic [riscv::XLEN-1:0]                rs2_rdata;   // information needed by RVFI
+         logic [riscv::VLEN-1:0]     lsu_addr;    // information needed by RVFI
+         logic [(riscv::XLEN/8)-1:0] lsu_rmask;   // information needed by RVFI
+         logic [(riscv::XLEN/8)-1:0] lsu_wmask;   // information needed by RVFI
+-        riscv::xlen_t               lsu_wdata;   // information needed by RVFI
++         logic [riscv::XLEN-1:0]                lsu_wdata;   // information needed by RVFI
+         logic                       vfp;         // is this a vector floating-point instruction?
+     } scoreboard_entry_t;
+ 
+@@ -843,7 +849,7 @@ package ariane_pkg;
+     typedef struct packed {
+         logic [DCACHE_INDEX_WIDTH-1:0] address_index;
+         logic [DCACHE_TAG_WIDTH-1:0]   address_tag;
+-        riscv::xlen_t                  data_wdata;
++         logic [riscv::XLEN-1:0]                   data_wdata;
+         logic [DCACHE_USER_WIDTH-1:0]  data_wuser;
+         logic                          data_req;
+         logic                          data_we;
+@@ -858,14 +864,14 @@ package ariane_pkg;
+         logic                          data_gnt;
+         logic                          data_rvalid;
+         logic [DCACHE_TID_WIDTH-1:0]   data_rid;
+-        riscv::xlen_t                  data_rdata;
++         logic [riscv::XLEN-1:0]                   data_rdata;
+         logic [DCACHE_USER_WIDTH-1:0]  data_ruser;
+     } dcache_req_o_t;
+ 
+     // ----------------------
+     // Arithmetic Functions
+     // ----------------------
+-    function automatic riscv::xlen_t sext32 (logic [31:0] operand);
++    function automatic  logic [riscv::XLEN-1:0]  sext32 (logic [31:0] operand);
+         return {{riscv::XLEN-32{operand[31]}}, operand[31:0]};
+     endfunction
+ 
+@@ -888,19 +894,20 @@ package ariane_pkg;
+     // LSU Functions
+     // ----------------------
+     // align data to address e.g.: shift data to be naturally 64
+-    function automatic riscv::xlen_t data_align (logic [2:0] addr, logic [63:0] data);
++    function automatic  logic [riscv::XLEN-1:0]  data_align (logic [2:0] addr, logic [63:0] data);
+         // Set addr[2] to 1'b0 when 32bits
+         logic [2:0] addr_tmp = {(addr[2] && riscv::IS_XLEN64), addr[1:0]};
+         logic [63:0] data_tmp = {64{1'b0}};
+         case (addr_tmp)
+-            3'b000: data_tmp[riscv::XLEN-1:0] = {data[riscv::XLEN-1:0]};
+-            3'b001: data_tmp[riscv::XLEN-1:0] = {data[riscv::XLEN-9:0],  data[riscv::XLEN-1:riscv::XLEN-8]};
+-            3'b010: data_tmp[riscv::XLEN-1:0] = {data[riscv::XLEN-17:0], data[riscv::XLEN-1:riscv::XLEN-16]};
+-            3'b011: data_tmp[riscv::XLEN-1:0] = {data[riscv::XLEN-25:0], data[riscv::XLEN-1:riscv::XLEN-24]};
++            3'b000: data_tmp = {{(64-riscv::XLEN){1'b0}}, data[riscv::XLEN-1:0]};
++            3'b001: data_tmp = {{(64-riscv::XLEN){1'b0}}, data[riscv::XLEN-9:0],  data[riscv::XLEN-1:riscv::XLEN-8]};
++            3'b010: data_tmp = {{(64-riscv::XLEN){1'b0}}, data[riscv::XLEN-17:0], data[riscv::XLEN-1:riscv::XLEN-16]};
++            3'b011: data_tmp = {{(64-riscv::XLEN){1'b0}}, data[riscv::XLEN-25:0], data[riscv::XLEN-1:riscv::XLEN-24]};
+             3'b100: data_tmp = {data[31:0], data[63:32]};
+             3'b101: data_tmp = {data[23:0], data[63:24]};
+             3'b110: data_tmp = {data[15:0], data[63:16]};
+             3'b111: data_tmp = {data[7:0],  data[63:8]};
++            default: data_tmp = {64{1'b0}};
+         endcase
+         return data_tmp[riscv::XLEN-1:0];
+     endfunction
+@@ -979,6 +986,12 @@ package ariane_pkg;
+     // Extract Bytes from Op
+     // ----------------------
+     function automatic logic [1:0] extract_transfer_size(fu_op op);
++        if (op == 35 || op == 36 || op == 81 || op == 85 || op == 47 || op == 49 || op == 59 || op == 60 || op == 61 || op == 62 || op == 63 || op == 64 || op == 65 || op == 66 || op == 67) return 2'b11;
++        if (op == 37 || op == 38 || op == 39 || op == 82 || op == 86 || op == 46 || op == 48 || op == 50 || op == 51 || op == 52 || op == 53 || op == 54 || op == 55 || op == 56 || op == 57 || op == 58) return 2'b10;
++        if (op == 40 || op == 41 || op == 42 || op == 83 || op == 87) return 2'b01;
++        if(op == 43 || op == 44 || op == 45 || op == 84 || op == 88) return 2'b00;
++        return 2'b11;
++        /*
+         case (op)
+             LD, SD, FLD, FSD,
+             AMO_LRD,   AMO_SCD,
+@@ -1002,5 +1015,6 @@ package ariane_pkg;
+             LB, LBU, SB, FLB, FSB: return 2'b00;
+             default:     return 2'b11;
+         endcase
++        */
+     endfunction
+ endpackage
+diff --git a/core/include/cv32a6_imac_sv32_config_pkg.sv b/core/include/cv32a6_imac_sv32_config_pkg.sv
+index 08eddf06..088fe538 100644
+--- a/core/include/cv32a6_imac_sv32_config_pkg.sv
++++ b/core/include/cv32a6_imac_sv32_config_pkg.sv
+@@ -51,7 +51,7 @@ package cva6_config_pkg;
+ 
+     localparam CVA6ConfigWtDcacheWbufDepth = 8;
+ 
+-    localparam CVA6ConfigNrCommitPorts = 2;
++    localparam CVA6ConfigNrCommitPorts = 1;
+     localparam CVA6ConfigNrScoreboardEntries = 8;
+ 
+     localparam CVA6ConfigFPGAEn = 0;
+@@ -72,7 +72,7 @@ package cva6_config_pkg;
+ 
+     localparam CVA6ConfigDcacheType = WT;
+ 
+-    localparam CVA6ConfigMmuPresent = 1;
++    localparam CVA6ConfigMmuPresent = 0;
+ 
+     localparam CVA6ConfigRvfiTrace = 1;
+ 
+diff --git a/core/include/riscv_pkg.sv b/core/include/riscv_pkg.sv
+index f25849b6..086678ef 100644
+--- a/core/include/riscv_pkg.sv
++++ b/core/include/riscv_pkg.sv
+@@ -613,7 +613,7 @@ package riscv;
+     localparam logic [63:0] SSTATUS_MXR  = 'h00080000;
+     localparam logic [63:0] SSTATUS_UPIE = 'h00000010;
+     localparam logic [63:0] SSTATUS_UXL  = 64'h0000000300000000;
+-    localparam logic [63:0] SSTATUS_SD   = {IS_XLEN64, 31'h00000000, ~IS_XLEN64, 31'h00000000};
++    localparam logic [63:0] SSTATUS_SD   = {((cva6_config_pkg::CVA6ConfigXlen == 32) ? 1'b0 : 1'b1), 31'h00000000, ((cva6_config_pkg::CVA6ConfigXlen == 32) ? 1'b1 : 1'b0), 31'h00000000};
+ 
+     localparam logic [63:0] MSTATUS_UIE  = 'h00000001;
+     localparam logic [63:0] MSTATUS_SIE  = 'h00000002;
+@@ -634,9 +634,9 @@ package riscv;
+     localparam logic [63:0] MSTATUS_TVM  = 'h00100000;
+     localparam logic [63:0] MSTATUS_TW   = 'h00200000;
+     localparam logic [63:0] MSTATUS_TSR  = 'h00400000;
+-    localparam logic [63:0] MSTATUS_UXL  = {30'h0000000, IS_XLEN64, IS_XLEN64, 32'h00000000};
+-    localparam logic [63:0] MSTATUS_SXL  = {28'h0000000, IS_XLEN64, IS_XLEN64, 34'h00000000};
+-    localparam logic [63:0] MSTATUS_SD   = {IS_XLEN64, 31'h00000000, ~IS_XLEN64, 31'h00000000};
++    localparam logic [63:0] MSTATUS_UXL  = {30'h0000000, ((cva6_config_pkg::CVA6ConfigXlen == 32) ? 1'b0 : 1'b1), ((cva6_config_pkg::CVA6ConfigXlen == 32) ? 1'b0 : 1'b1), 32'h00000000};
++    localparam logic [63:0] MSTATUS_SXL  = {28'h0000000, ((cva6_config_pkg::CVA6ConfigXlen == 32) ? 1'b0 : 1'b1), ((cva6_config_pkg::CVA6ConfigXlen == 32) ? 1'b0 : 1'b1), 34'h00000000};
++    localparam logic [63:0] MSTATUS_SD   = {((cva6_config_pkg::CVA6ConfigXlen == 32) ? 1'b0 : 1'b1), 31'h00000000, ((cva6_config_pkg::CVA6ConfigXlen == 32) ? 1'b1 : 1'b0), 31'h00000000};
+ 
+     typedef enum logic [2:0] {
+         CSRRW  = 3'h1,
+diff --git a/core/include/wt_cache_pkg.sv b/core/include/wt_cache_pkg.sv
+index 4e0fca72..3788dd50 100644
+--- a/core/include/wt_cache_pkg.sv
++++ b/core/include/wt_cache_pkg.sv
+@@ -70,7 +70,7 @@ package wt_cache_pkg;
+ 
+   typedef struct packed {
+     logic [ariane_pkg::DCACHE_TAG_WIDTH+(ariane_pkg::DCACHE_INDEX_WIDTH-riscv::XLEN_ALIGN_BYTES)-1:0] wtag;
+-    riscv::xlen_t                                                                           data;
++     logic [riscv::XLEN-1:0]                                                                            data;
+     logic [ariane_pkg::DCACHE_USER_WIDTH-1:0]                                               user;
+     logic [(riscv::XLEN/8)-1:0]                                                             dirty;   // byte is dirty
+     logic [(riscv::XLEN/8)-1:0]                                                             valid;   // byte is valid
+@@ -146,7 +146,7 @@ package wt_cache_pkg;
+     logic [2:0]                                      size;        // transaction size: 000=Byte 001=2Byte; 010=4Byte; 011=8Byte; 111=Cache line (16/32Byte)
+     logic [L1D_WAY_WIDTH-1:0]                        way;         // way to replace
+     logic [riscv::PLEN-1:0]                          paddr;       // physical address
+-    riscv::xlen_t                                    data;        // word width of processor (no block stores at the moment)
++     logic [riscv::XLEN-1:0]                                     data;        // word width of processor (no block stores at the moment)
+     logic [ariane_pkg::DATA_USER_WIDTH-1:0]          user;        // user width of processor (no block stores at the moment)
+     logic                                            nc;          // noncacheable
+     logic [CACHE_ID_WIDTH-1:0]                       tid;         // threadi id (used as transaction id in Ariane)
+@@ -261,7 +261,7 @@ package wt_cache_pkg;
+     input logic [63:0] in
+   );
+     logic [5:0] cnt= 0;
+-    foreach (in[k]) begin
++    for(int k=0; k<64;k+=1)begin
+       cnt += 6'(in[k]);
+     end
+     return cnt;
+diff --git a/core/issue_read_operands.sv b/core/issue_read_operands.sv
+index 8801dd28..c2d7531b 100644
+--- a/core/issue_read_operands.sv
++++ b/core/issue_read_operands.sv
+@@ -29,10 +29,10 @@ module issue_read_operands import ariane_pkg::*; #(
+     output logic                                   issue_ack_o,
+     // lookup rd in scoreboard
+     output logic [REG_ADDR_SIZE-1:0]               rs1_o,
+-    input  riscv::xlen_t                           rs1_i,
++    input   logic [riscv::XLEN-1:0]                            rs1_i,
+     input  logic                                   rs1_valid_i,
+     output logic [REG_ADDR_SIZE-1:0]               rs2_o,
+-    input  riscv::xlen_t                           rs2_i,
++    input   logic [riscv::XLEN-1:0]                            rs2_i,
+     input  logic                                   rs2_valid_i,
+     output logic [REG_ADDR_SIZE-1:0]               rs3_o,
+     input  rs3_len_t                               rs3_i,
+@@ -42,8 +42,8 @@ module issue_read_operands import ariane_pkg::*; #(
+     input  fu_t [2**REG_ADDR_SIZE-1:0]             rd_clobber_fpr_i,
+     // To FU, just single issue for now
+     output fu_data_t                               fu_data_o,
+-    output riscv::xlen_t                           rs1_forwarding_o,  // unregistered version of fu_data_o.operanda
+-    output riscv::xlen_t                           rs2_forwarding_o,  // unregistered version of fu_data_o.operandb
++    output  logic [riscv::XLEN-1:0]                            rs1_forwarding_o,  // unregistered version of fu_data_o.operanda
++    output  logic [riscv::XLEN-1:0]                            rs2_forwarding_o,  // unregistered version of fu_data_o.operandb
+     output logic [riscv::VLEN-1:0]                 pc_o,
+     output logic                                   is_compressed_instr_o,
+     // ALU 1
+@@ -82,10 +82,10 @@ module issue_read_operands import ariane_pkg::*; #(
+ );
+     logic stall;
+     logic fu_busy; // functional unit is busy
+-    riscv::xlen_t    operand_a_regfile, operand_b_regfile;  // operands coming from regfile
++     logic [riscv::XLEN-1:0]     operand_a_regfile, operand_b_regfile;  // operands coming from regfile
+     rs3_len_t operand_c_regfile; // third operand from fp regfile or gp regfile if NR_RGPR_PORTS == 3
+     // output flipflop (ID <-> EX)
+-    riscv::xlen_t operand_a_n, operand_a_q,
++     logic [riscv::XLEN-1:0]  operand_a_n, operand_a_q,
+                  operand_b_n, operand_b_q,
+                  imm_n, imm_q;
+ 
+diff --git a/core/issue_stage.sv b/core/issue_stage.sv
+index 00ddf92d..d2b2e4df 100644
+--- a/core/issue_stage.sv
++++ b/core/issue_stage.sv
+@@ -99,11 +99,11 @@ module issue_stage import ariane_pkg::*; #(
+     fu_t  [2**REG_ADDR_SIZE-1:0] rd_clobber_fpr_sb_iro;
+ 
+     logic [REG_ADDR_SIZE-1:0]  rs1_iro_sb;
+-    riscv::xlen_t              rs1_sb_iro;
++     logic [riscv::XLEN-1:0]               rs1_sb_iro;
+     logic                      rs1_valid_sb_iro;
+ 
+     logic [REG_ADDR_SIZE-1:0]  rs2_iro_sb;
+-    riscv::xlen_t              rs2_sb_iro;
++     logic [riscv::XLEN-1:0]               rs2_sb_iro;
+     logic                      rs2_valid_iro_sb;
+ 
+     logic [REG_ADDR_SIZE-1:0]  rs3_iro_sb;
+@@ -118,8 +118,8 @@ module issue_stage import ariane_pkg::*; #(
+     logic                      issue_instr_valid_sb_iro;
+     logic                      issue_ack_iro_sb;
+ 
+-    riscv::xlen_t              rs1_forwarding_xlen;
+-    riscv::xlen_t              rs2_forwarding_xlen;
++     logic [riscv::XLEN-1:0]               rs1_forwarding_xlen;
++     logic [riscv::XLEN-1:0]               rs2_forwarding_xlen;
+ 
+     assign rs1_forwarding_o = rs1_forwarding_xlen[riscv::VLEN-1:0];
+     assign rs2_forwarding_o = rs2_forwarding_xlen[riscv::VLEN-1:0];
+diff --git a/core/load_store_unit.sv b/core/load_store_unit.sv
+index 73efd72b..eea9bfd2 100644
+--- a/core/load_store_unit.sv
++++ b/core/load_store_unit.sv
+@@ -30,12 +30,12 @@ module load_store_unit import ariane_pkg::*; #(
+     input  logic                     lsu_valid_i,              // Input is valid
+ 
+     output logic [TRANS_ID_BITS-1:0] load_trans_id_o,          // ID of scoreboard entry at which to write back
+-    output riscv::xlen_t             load_result_o,
++    output  logic [riscv::XLEN-1:0]              load_result_o,
+     output logic                     load_valid_o,
+     output exception_t               load_exception_o,         // to WB, signal exception status LD exception
+ 
+     output logic [TRANS_ID_BITS-1:0] store_trans_id_o,         // ID of scoreboard entry at which to write back
+-    output riscv::xlen_t             store_result_o,
++    output  logic [riscv::XLEN-1:0]              store_result_o,
+     output logic                     store_valid_o,
+     output exception_t               store_exception_o,        // to WB, signal exception status ST exception
+ 
+@@ -99,7 +99,7 @@ module load_store_unit import ariane_pkg::*; #(
+     // ------------------------------
+     // virtual address as calculated by the AGU in the first cycle
+     logic [riscv::VLEN-1:0]           vaddr_i;
+-    riscv::xlen_t                     vaddr_xlen;
++     logic [riscv::XLEN-1:0]                      vaddr_xlen;
+     logic                             overflow;
+     logic [(riscv::XLEN/8)-1:0]       be_i;
+ 
+@@ -124,10 +124,10 @@ module load_store_unit import ariane_pkg::*; #(
+ 
+     logic                     ld_valid;
+     logic [TRANS_ID_BITS-1:0] ld_trans_id;
+-    riscv::xlen_t             ld_result;
++     logic [riscv::XLEN-1:0]              ld_result;
+     logic                     st_valid;
+     logic [TRANS_ID_BITS-1:0] st_trans_id;
+-    riscv::xlen_t             st_result;
++     logic [riscv::XLEN-1:0]              st_result;
+ 
+     logic [11:0]              page_offset;
+     logic                     page_offset_matches;
+@@ -381,8 +381,49 @@ module load_store_unit import ariane_pkg::*; #(
+     // we can generate the byte enable from the virtual address since the last
+     // 12 bit are the same anyway
+     // and we can always generate the byte enable from the address at hand
+-    assign be_i = riscv::IS_XLEN64 ? be_gen(vaddr_i[2:0], extract_transfer_size(fu_data_i.operation)):
+-                                     be_gen_32(vaddr_i[1:0], extract_transfer_size(fu_data_i.operation));
++    logic [1:0] op_size;
++    logic [7:0] fu_op;
++    logic [1:0] vaddr_part;
++	always_comb begin : byte_enable
++		fu_op = fu_data_i.operation;
++		op_size = 2'b11;
++		if (fu_op == 8'd35 || fu_op == 8'd36 || fu_op == 8'd81 || fu_op == 8'd85 || fu_op == 8'd47 || fu_op == 8'd49 || fu_op == 8'd59 || fu_op == 8'd60 || fu_op == 8'd61 || fu_op == 8'd62 || fu_op == 8'd63 || fu_op == 8'd64 || fu_op == 8'd65 || fu_op == 8'd66 || fu_op == 8'd67) op_size = 2'b11;
++		if (fu_op == 8'd37 || fu_op == 8'd38 || fu_op == 8'd39 || fu_op == 8'd82 || fu_op == 8'd86 || fu_op == 8'd46 || fu_op == 8'd48 || fu_op == 8'd50 || fu_op == 8'd51 || fu_op == 8'd52 || fu_op == 8'd53 || fu_op == 8'd54 || fu_op == 8'd55 || fu_op == 8'd56 || fu_op == 8'd57 || fu_op == 8'd58) op_size = 2'b10;
++		if (fu_op == 8'd40 || fu_op == 8'd41 || fu_op == 8'd42 || fu_op == 8'd83 || fu_op == 8'd87) op_size = 2'b01;
++		if (fu_op == 8'd43 || fu_op == 8'd44 || fu_op == 8'd45 || fu_op == 8'd84 || fu_op == 8'd88) op_size = 2'b00;
++		
++		vaddr_part = vaddr_i[1:0];
++		be_i = 4'b0;
++		if (op_size == 2'b10) be_i = 4'b1111;
++		if (op_size == 2'b01) be_i = 
++            (vaddr_part == 2'b00 ? 4'b0011 : 
++            (vaddr_part == 2'b01 ? 4'b0110 : 
++            (vaddr_part == 2'b10 ? 4'b1100 : 
++            4'b1001))); 
++		if (op_size == 2'b00) be_i =
++			(vaddr_part == 2'b00 ? 4'b0001 : 
++			(vaddr_part == 2'b01 ? 4'b0010 : 
++			(vaddr_part == 2'b10 ? 4'b0100 : 
++			4'b1000)));
++	end
++    //assign fu_op = fu_data_i.operation;
++    //assign op_size = ((fu_op == 8'd35 || fu_op == 8'd36 || fu_op == 8'd81 || fu_op == 8'd85 || fu_op == 8'd47 || fu_op == 8'd49 || fu_op == 8'd59 || fu_op == 8'd60 || fu_op == 8'd61 || fu_op == 8'd62 || fu_op == 8'd63 || fu_op == 8'd64 || fu_op == 8'd65 || fu_op == 8'd66 || fu_op == 8'd67) ? 2'b11 : ((fu_op == 8'd37 || fu_op == 8'd38 || fu_op == 8'd39 || fu_op == 8'd82 || fu_op == 8'd86 || fu_op == 8'd46 || fu_op == 8'd48 || fu_op == 8'd50 || fu_op == 8'd51 || fu_op == 8'd52 || fu_op == 8'd53 || fu_op == 8'd54 || fu_op == 8'd55 || fu_op == 8'd56 || fu_op == 8'd57 || fu_op == 8'd58) ? 2'b10 : ((fu_op == 8'd40 || fu_op == 8'd41 || fu_op == 8'd42 || fu_op == 8'd83 || fu_op == 8'd87) ? 2'b01 : ((fu_op == 8'd43 || fu_op == 8'd44 || fu_op == 8'd45 || fu_op == 8'd84 || fu_op == 8'd88) ? 2'b00 : 2b'11))));
++    //assign vaddr_part = vaddr_i[1:0];
++    //assign be_i = riscv::IS_XLEN64 ? 4b'xxxx : 4'b0000;
++    //    (op_size == 2'b10 ? 4'b1111 : 
++    //    (op_size == 2'b01 ? 
++    //            (vaddr_part == 2'b00 ? 4'b0011 : 
++    //            (vaddr_part == 2'b01 ? 4'b0110 : 
++    //            (vaddr_part == 2'b10 ? 4'b1100 : 
++    //            4'bxxxx))) : 
++    //    (op_size == 2'b00 ? 
++    //        (vaddr_part == 2'b00 ? 4'b0001 : 
++    //        (vaddr_part == 2'b01 ? 4'b0010 : 
++    //        (vaddr_part == 2'b10 ? 4'b0100 : 
++    //        4'b1000))) 
++    //    : 4'b0)))
++    //assign be_i = riscv::IS_XLEN64 ? be_gen(vaddr_i[2:0], extract_transfer_size(fu_data_i.operation)):
++    //                                 be_gen_32(vaddr_i[1:0], extract_transfer_size(fu_data_i.operation));
+ 
+     // ------------------------
+     // Misaligned Exception
+diff --git a/core/load_unit.sv b/core/load_unit.sv
+index 8ab3d2a3..321fffd3 100644
+--- a/core/load_unit.sv
++++ b/core/load_unit.sv
+@@ -27,7 +27,7 @@ module load_unit import ariane_pkg::*; #(
+     // load unit output port
+     output logic                     valid_o,
+     output logic [TRANS_ID_BITS-1:0] trans_id_o,
+-    output riscv::xlen_t             result_o,
++    output  logic [riscv::XLEN-1:0]              result_o,
+     output exception_t               ex_o,
+     // MMU -> Address Translation
+     output logic                     translation_req_o,   // request address translation
+@@ -318,7 +318,7 @@ module load_unit import ariane_pkg::*; #(
+     // ---------------
+     // Sign Extend
+     // ---------------
+-    riscv::xlen_t shifted_data;
++     logic [riscv::XLEN-1:0]  shifted_data;
+ 
+     // realign as needed
+     assign shifted_data   = req_port_i.data_rdata >> {load_data_q.address_offset, 3'b000};
+diff --git a/core/mmu_sv32/cva6_ptw_sv32.sv b/core/mmu_sv32/cva6_ptw_sv32.sv
+index 856f3c8b..84b28c09 100644
+--- a/core/mmu_sv32/cva6_ptw_sv32.sv
++++ b/core/mmu_sv32/cva6_ptw_sv32.sv
+@@ -76,7 +76,7 @@ module cva6_ptw_sv32 import ariane_pkg::*; #(
+ 
+     // input registers
+     logic data_rvalid_q;
+-    riscv::xlen_t data_rdata_q;
++     logic [riscv::XLEN-1:0]  data_rdata_q;
+ 
+     riscv::pte_sv32_t pte;
+     assign pte = riscv::pte_sv32_t'(data_rdata_q);
+diff --git a/core/mult.sv b/core/mult.sv
+index e09b7388..36482778 100644
+--- a/core/mult.sv
++++ b/core/mult.sv
+@@ -8,7 +8,7 @@ module mult import ariane_pkg::*; #(
+     input  logic                     flush_i,
+     input  fu_data_t                 fu_data_i,
+     input  logic                     mult_valid_i,
+-    output riscv::xlen_t             result_o,
++    output  logic [riscv::XLEN-1:0]              result_o,
+     output logic                     mult_valid_o,
+     output logic                     mult_ready_o,
+     output logic [TRANS_ID_BITS-1:0] mult_trans_id_o
+@@ -18,8 +18,8 @@ module mult import ariane_pkg::*; #(
+     logic                     div_ready_i; // receiver of division result is able to accept the result
+     logic [TRANS_ID_BITS-1:0] mul_trans_id;
+     logic [TRANS_ID_BITS-1:0] div_trans_id;
+-    riscv::xlen_t             mul_result;
+-    riscv::xlen_t             div_result;
++     logic [riscv::XLEN-1:0]              mul_result;
++     logic [riscv::XLEN-1:0]              div_result;
+ 
+     logic                     div_valid_op;
+     logic                     mul_valid_op;
+@@ -62,8 +62,8 @@ module mult import ariane_pkg::*; #(
+     // ---------------------
+     // Division
+     // ---------------------
+-    riscv::xlen_t           operand_b, operand_a;  // input operands after input MUX (input silencing, word operations or full inputs)
+-    riscv::xlen_t           result;                // result before result mux
++     logic [riscv::XLEN-1:0]            operand_b, operand_a;  // input operands after input MUX (input silencing, word operations or full inputs)
++     logic [riscv::XLEN-1:0]            result;                // result before result mux
+ 
+     logic        div_signed;            // signed or unsigned division
+     logic        rem;                   // is it a reminder (or not a reminder e.g.: a division)
+diff --git a/core/multiplier.sv b/core/multiplier.sv
+index 7a765fea..7209f65f 100644
+--- a/core/multiplier.sv
++++ b/core/multiplier.sv
+@@ -23,9 +23,9 @@ module multiplier import ariane_pkg::*; #(
+     input  logic [TRANS_ID_BITS-1:0] trans_id_i,
+     input  logic                     mult_valid_i,
+     input  fu_op                     operation_i,
+-    input  riscv::xlen_t             operand_a_i,
+-    input  riscv::xlen_t             operand_b_i,
+-    output riscv::xlen_t             result_o,
++    input   logic [riscv::XLEN-1:0]              operand_a_i,
++    input   logic [riscv::XLEN-1:0]              operand_b_i,
++    output  logic [riscv::XLEN-1:0]              result_o,
+     output logic                     mult_valid_o,
+     output logic                     mult_ready_o,
+     output logic [TRANS_ID_BITS-1:0] mult_trans_id_o
+diff --git a/core/perf_counters.sv b/core/perf_counters.sv
+index d299411b..6bd63865 100644
+--- a/core/perf_counters.sv
++++ b/core/perf_counters.sv
+@@ -23,8 +23,8 @@ module perf_counters import ariane_pkg::*; #(
+   // SRAM like interface
+   input  logic [11:0]                             addr_i,   // read/write address (up to 6 counters possible)
+   input  logic                                    we_i,     // write enable
+-  input  riscv::xlen_t                            data_i,   // data to write
+-  output riscv::xlen_t                            data_o,   // data to read
++  input   logic [riscv::XLEN-1:0]                             data_i,   // data to write
++  output  logic [riscv::XLEN-1:0]                             data_o,   // data to read
+   // from commit stage
+   input  scoreboard_entry_t [CVA6Cfg.NrCommitPorts-1:0] commit_instr_i,     // the instruction we want to commit
+   input  logic [CVA6Cfg.NrCommitPorts-1:0]              commit_ack_i,       // acknowledge that we are indeed committing
+diff --git a/core/scoreboard.sv b/core/scoreboard.sv
+index d954947a..80eef5fa 100644
+--- a/core/scoreboard.sv
++++ b/core/scoreboard.sv
+@@ -29,11 +29,11 @@ module scoreboard #(
+ 
+   // regfile like interface to operand read stage
+   input  logic [ariane_pkg::REG_ADDR_SIZE-1:0]                  rs1_i,
+-  output riscv::xlen_t                                          rs1_o,
++  output  logic [riscv::XLEN-1:0]                                           rs1_o,
+   output logic                                                  rs1_valid_o,
+ 
+   input  logic [ariane_pkg::REG_ADDR_SIZE-1:0]                  rs2_i,
+-  output riscv::xlen_t                                          rs2_o,
++  output  logic [riscv::XLEN-1:0]                                           rs2_o,
+   output logic                                                  rs2_valid_o,
+ 
+   input  logic [ariane_pkg::REG_ADDR_SIZE-1:0]                  rs3_i,
+@@ -68,8 +68,8 @@ module scoreboard #(
+   input [(riscv::XLEN/8)-1:0]                                   lsu_rmask_i,
+   input [(riscv::XLEN/8)-1:0]                                   lsu_wmask_i,
+   input [ariane_pkg::TRANS_ID_BITS-1:0]                         lsu_addr_trans_id_i,
+-  input riscv::xlen_t                                           rs1_forwarding_i,
+-  input riscv::xlen_t                                           rs2_forwarding_i
++  input  logic [riscv::XLEN-1:0]                                            rs1_forwarding_i,
++  input  logic [riscv::XLEN-1:0]                                            rs2_forwarding_i
+ );
+   localparam int unsigned BITS_ENTRIES = $clog2(NR_ENTRIES);
+ 
+@@ -190,7 +190,7 @@ module scoreboard #(
+     // Commit Port
+     // ------------
+     // we've got an acknowledge from commit
+-    for (logic [CVA6Cfg.NrCommitPorts-1:0] i = 0; i < CVA6Cfg.NrCommitPorts; i++) begin
++    for (int unsigned i = 0; i < CVA6Cfg.NrCommitPorts; i++) begin
+       if (commit_ack_i[i]) begin
+         // this instruction is no longer in issue e.g.: it is considered finished
+         mem_n[commit_pointer_q[i]].issued     = 1'b0;
+@@ -264,7 +264,7 @@ module scoreboard #(
+       .clk_i   ( clk_i               ),
+       .rst_ni  ( rst_ni              ),
+       .flush_i ( 1'b0                ),
+-      .rr_i    ( '0                  ),
++      .rr_i    ( 4'b0                ),
+       .req_i   ( gpr_clobber_vld[k]  ),
+       .gnt_o   (                     ),
+       .data_i  ( clobber_fu          ),
+@@ -360,7 +360,7 @@ module scoreboard #(
+     .idx_o   (             )
+   );
+ 
+-  riscv::xlen_t           rs3;
++   logic [riscv::XLEN-1:0]            rs3;
+ 
+   rr_arb_tree #(
+     .NumIn(NR_ENTRIES+NR_WB_PORTS),
+diff --git a/core/store_buffer.sv b/core/store_buffer.sv
+index 6a116328..c13426bd 100644
+--- a/core/store_buffer.sv
++++ b/core/store_buffer.sv
+@@ -38,7 +38,7 @@ module store_buffer import ariane_pkg::*; #(
+ 
+     input  logic [riscv::PLEN-1:0]  paddr_i,         // physical address of store which needs to be placed in the queue
+     output [riscv::PLEN-1:0]        mem_paddr_o,
+-    input  riscv::xlen_t            data_i,          // data which is placed in the queue
++    input   logic [riscv::XLEN-1:0]             data_i,          // data which is placed in the queue
+     input  logic [(riscv::XLEN/8)-1:0]   be_i,            // byte enable in
+     input  logic [1:0]   data_size_i,     // type of request we are making (e.g.: bytes to write)
+ 
+@@ -46,19 +46,39 @@ module store_buffer import ariane_pkg::*; #(
+     input  dcache_req_o_t req_port_i,
+     output dcache_req_i_t req_port_o
+ );
++    localparam ENTRY_WIDTH = (riscv::PLEN + riscv::XLEN + (riscv::XLEN / 8) + 2 + 1);
+ 
+     // the store queue has two parts:
+     // 1. Speculative queue
+     // 2. Commit queue which is non-speculative, e.g.: the store will definitely happen.
+-    struct packed {
+-        logic [riscv::PLEN-1:0]      address;
+-        riscv::xlen_t                data;
+-        logic [(riscv::XLEN/8)-1:0]  be;
+-        logic [1:0]                  data_size;
+-        logic                        valid;     // this entry is valid, we need this for checking if the address offset matches
+-    } speculative_queue_n [DEPTH_SPEC-1:0], speculative_queue_q [DEPTH_SPEC-1:0],
+-      commit_queue_n [DEPTH_COMMIT-1:0],    commit_queue_q [DEPTH_COMMIT-1:0];
+-
++    //struct packed {
++    //    logic [riscv::PLEN-1:0]      address;
++    //    logic [riscv::XLEN-1:0]      data;
++    //    logic [(riscv::XLEN/8)-1:0]  be;
++    //    logic [1:0]                  data_size;
++    //    logic                        valid;     // this entry is valid, we need this for checking if the address offset matches
++    //} speculative_queue_n [DEPTH_SPEC-1:0], speculative_queue_q [DEPTH_SPEC-1:0],
++    //  commit_queue_n [DEPTH_COMMIT-1:0],    commit_queue_q [DEPTH_COMMIT-1:0];
++	  
++	logic [(ENTRY_WIDTH * DEPTH_SPEC)-1:0] speculative_queue_n;
++	logic [(ENTRY_WIDTH * DEPTH_SPEC)-1:0] speculative_queue_q;
++	
++	logic [(ENTRY_WIDTH * DEPTH_COMMIT)-1:0] commit_queue_n;
++	logic [(ENTRY_WIDTH * DEPTH_COMMIT)-1:0] commit_queue_q;
++	
++	logic [(riscv::PLEN * DEPTH_COMMIT)-1:0] temp_addresses_commit;
++    always_comb begin : temp_c
++        for (int i = 0; i < DEPTH_COMMIT; i++) begin
++            temp_addresses_commit[((i + 1) * riscv::PLEN) - 1 : i * riscv::PLEN] = commit_queue_q[(i * ENTRY_WIDTH) + riscv::PLEN - 1: (i * ENTRY_WIDTH)];
++        end
++    end
++    logic [(riscv::PLEN * DEPTH_SPEC)-1:0]      temp_addresses_spec;
++    always_comb begin : temp_s    
++        for (int i = 0; i < DEPTH_SPEC; i++) begin
++            temp_addresses_spec[((i + 1) * riscv::PLEN) - 1 : i * riscv::PLEN] = speculative_queue_q[(i * ENTRY_WIDTH) + riscv::PLEN - 1: (i * ENTRY_WIDTH)];
++        end
++    end	
++	
+     // keep a status count for both buffers
+     logic [$clog2(DEPTH_SPEC):0] speculative_status_cnt_n, speculative_status_cnt_q;
+     logic [$clog2(DEPTH_COMMIT):0] commit_status_cnt_n, commit_status_cnt_q;
+@@ -87,11 +107,11 @@ module store_buffer import ariane_pkg::*; #(
+         // LSU interface
+         // we are ready to accept a new entry and the input data is valid
+         if (valid_i) begin
+-            speculative_queue_n[speculative_write_pointer_q].address   = paddr_i;
+-            speculative_queue_n[speculative_write_pointer_q].data      = data_i;
+-            speculative_queue_n[speculative_write_pointer_q].be        = be_i;
+-            speculative_queue_n[speculative_write_pointer_q].data_size = data_size_i;
+-            speculative_queue_n[speculative_write_pointer_q].valid   = 1'b1;
++            speculative_queue_n[(speculative_write_pointer_q * ENTRY_WIDTH) + riscv::PLEN - 1 : (speculative_write_pointer_q * ENTRY_WIDTH)]   = paddr_i;
++            speculative_queue_n[(speculative_write_pointer_q * ENTRY_WIDTH) + riscv::PLEN + riscv::XLEN - 1 : (speculative_write_pointer_q * ENTRY_WIDTH) + riscv::PLEN]      = data_i;
++            speculative_queue_n[(speculative_write_pointer_q * ENTRY_WIDTH) + riscv::PLEN + riscv::XLEN + (riscv::XLEN / 8) - 1 : (speculative_write_pointer_q * ENTRY_WIDTH) + riscv::PLEN + riscv::XLEN]        = be_i;
++            speculative_queue_n[(speculative_write_pointer_q * ENTRY_WIDTH) + riscv::PLEN + riscv::XLEN + (riscv::XLEN / 8) + 2 - 1 : (speculative_write_pointer_q * ENTRY_WIDTH) + riscv::PLEN + riscv::XLEN + (riscv::XLEN / 8)] = data_size_i;
++            speculative_queue_n[(speculative_write_pointer_q * ENTRY_WIDTH) + riscv::PLEN + riscv::XLEN + (riscv::XLEN / 8) + 2]   = 1'b1;
+             // advance the write pointer
+             speculative_write_pointer_n = speculative_write_pointer_q + 1'b1;
+             speculative_status_cnt++;
+@@ -101,7 +121,7 @@ module store_buffer import ariane_pkg::*; #(
+         // to the memory hierarchy
+         if (commit_i) begin
+             // invalidate
+-            speculative_queue_n[speculative_read_pointer_q].valid = 1'b0;
++            speculative_queue_n[(speculative_read_pointer_q * ENTRY_WIDTH) + riscv::PLEN + riscv::XLEN + (riscv::XLEN / 8) + 2] = 1'b0;
+             // advance the read pointer
+             speculative_read_pointer_n = speculative_read_pointer_q + 1'b1;
+             speculative_status_cnt--;
+@@ -113,7 +133,7 @@ module store_buffer import ariane_pkg::*; #(
+         if (flush_i) begin
+             // reset all valid flags
+             for (int unsigned i = 0; i < DEPTH_SPEC; i++)
+-                speculative_queue_n[i].valid = 1'b0;
++                speculative_queue_n[(i * ENTRY_WIDTH) + riscv::PLEN + riscv::XLEN + (riscv::XLEN / 8) + 2] = 1'b0;
+ 
+             speculative_write_pointer_n = speculative_read_pointer_q;
+             // also reset the status count
+@@ -134,17 +154,22 @@ module store_buffer import ariane_pkg::*; #(
+     // we do not require an acknowledgement for writes, thus we do not need to identify uniquely the responses
+     assign req_port_o.data_id       = '0;
+     // those signals can directly be output to the memory
+-    assign req_port_o.address_index = commit_queue_q[commit_read_pointer_q].address[ariane_pkg::DCACHE_INDEX_WIDTH-1:0];
++    //assign req_port_o.address_index = commit_queue_q[commit_read_pointer_q].address[ariane_pkg::DCACHE_INDEX_WIDTH-1:0];
++    assign req_port_o.address_index = temp_addresses_commit[(commit_read_pointer_q * riscv::PLEN) + ariane_pkg::DCACHE_INDEX_WIDTH - 1 : (commit_read_pointer_q * riscv::PLEN)];
+     // if we got a new request we already saved the tag from the previous cycle
+-    assign req_port_o.address_tag   = commit_queue_q[commit_read_pointer_q].address[ariane_pkg::DCACHE_TAG_WIDTH     +
+-                                                                                    ariane_pkg::DCACHE_INDEX_WIDTH-1 :
+-                                                                                    ariane_pkg::DCACHE_INDEX_WIDTH];
+-    assign req_port_o.data_wdata    = commit_queue_q[commit_read_pointer_q].data;
+-    assign req_port_o.data_be       = commit_queue_q[commit_read_pointer_q].be;
+-    assign req_port_o.data_size     = commit_queue_q[commit_read_pointer_q].data_size;
+-
+-    assign mem_paddr_o              = commit_queue_n[commit_read_pointer_n].address;
+-
++    //assign req_port_o.address_tag   = commit_queue_q[commit_read_pointer_q].address[ariane_pkg::DCACHE_TAG_WIDTH     +
++    //                                                                                ariane_pkg::DCACHE_INDEX_WIDTH-1 :
++    //                                                                                ariane_pkg::DCACHE_INDEX_WIDTH];
++    assign req_port_o.address_tag   = temp_addresses_commit[(commit_read_pointer_q * riscv::PLEN) + ariane_pkg::DCACHE_TAG_WIDTH + ariane_pkg::DCACHE_INDEX_WIDTH - 1 : (commit_read_pointer_q * riscv::PLEN) + ariane_pkg::DCACHE_INDEX_WIDTH];
++    assign req_port_o.data_wdata    = commit_queue_q[(commit_read_pointer_q * ENTRY_WIDTH) + riscv::PLEN + riscv::XLEN - 1 : (commit_read_pointer_q * ENTRY_WIDTH) + riscv::PLEN];
++    assign req_port_o.data_be       = commit_queue_q[(commit_read_pointer_q * ENTRY_WIDTH) + riscv::PLEN + riscv::XLEN + (riscv::XLEN / 8) - 1 : (commit_read_pointer_q * ENTRY_WIDTH) + riscv::PLEN + riscv::XLEN];
++    assign req_port_o.data_size     = commit_queue_q[(commit_read_pointer_q * ENTRY_WIDTH) + riscv::PLEN + riscv::XLEN + (riscv::XLEN / 8) + 2 - 1 : (commit_read_pointer_q * ENTRY_WIDTH) + riscv::PLEN + riscv::XLEN + (riscv::XLEN / 8)];
++
++    assign mem_paddr_o              = commit_queue_n[(commit_read_pointer_n * ENTRY_WIDTH) + riscv::PLEN - 1 : (commit_read_pointer_n * ENTRY_WIDTH)];
++
++	logic [ENTRY_WIDTH - 1 : 0] spec_queue_entry;
++	assign spec_queue_entry = speculative_queue_q[(ENTRY_WIDTH * (commit_read_pointer_q + 1)) - 1 : (ENTRY_WIDTH * commit_read_pointer_q)];
++	
+     always_comb begin : store_if
+         automatic logic [$clog2(DEPTH_COMMIT):0] commit_status_cnt;
+         commit_status_cnt = commit_status_cnt_q;
+@@ -162,11 +187,11 @@ module store_buffer import ariane_pkg::*; #(
+ 
+         // there should be no commit when we are flushing
+         // if the entry in the commit queue is valid and not speculative anymore we can issue this instruction
+-        if (commit_queue_q[commit_read_pointer_q].valid && !stall_st_pending_i) begin
++        if (commit_queue_q[(commit_read_pointer_q * ENTRY_WIDTH) + riscv::PLEN + riscv::XLEN + (riscv::XLEN / 8) + 2] && !stall_st_pending_i) begin
+             req_port_o.data_req = 1'b1;
+             if (req_port_i.data_gnt) begin
+                 // we can evict it from the commit buffer
+-                commit_queue_n[commit_read_pointer_q].valid = 1'b0;
++                commit_queue_n[(commit_read_pointer_q * ENTRY_WIDTH) + riscv::PLEN + riscv::XLEN + (riscv::XLEN / 8) + 2] = 1'b0;
+                 // advance the read_pointer
+                 commit_read_pointer_n = commit_read_pointer_q + 1'b1;
+                 commit_status_cnt--;
+@@ -177,7 +202,7 @@ module store_buffer import ariane_pkg::*; #(
+ 
+         // shift the store request from the speculative buffer to the non-speculative
+         if (commit_i) begin
+-            commit_queue_n[commit_write_pointer_q] = speculative_queue_q[speculative_read_pointer_q];
++			commit_queue_n[((commit_write_pointer_q + 1) * ENTRY_WIDTH) - 1 : commit_write_pointer_q * ENTRY_WIDTH] = spec_queue_entry;
+             commit_write_pointer_n = commit_write_pointer_n + 1'b1;
+             commit_status_cnt++;
+         end
+@@ -200,21 +225,24 @@ module store_buffer import ariane_pkg::*; #(
+     //
+     // checks if the requested load is in the store buffer
+     // page offsets are virtually and physically the same
++	
+     always_comb begin : address_checker
+         page_offset_matches_o = 1'b0;
+ 
+         // check if the LSBs are identical and the entry is valid
+         for (int unsigned i = 0; i < DEPTH_COMMIT; i++) begin
++            //temp_address = commit_queue_q[i].address;
+             // Check if the page offset matches and whether the entry is valid, for the commit queue
+-            if ((page_offset_i[11:3] == commit_queue_q[i].address[11:3]) && commit_queue_q[i].valid) begin
++            if ((page_offset_i[11:3] == temp_addresses_commit[(i * riscv::PLEN) + 11 : (i * riscv::PLEN) + 3]) && commit_queue_q[(i * ENTRY_WIDTH) + riscv::PLEN + riscv::XLEN + (riscv::XLEN / 8) + 2]) begin
+                 page_offset_matches_o = 1'b1;
+                 break;
+             end
+         end
+ 
+         for (int unsigned i = 0; i < DEPTH_SPEC; i++) begin
++            //temp_address = speculative_queue_q[i].address;
+             // do the same for the speculative queue
+-            if ((page_offset_i[11:3] == speculative_queue_q[i].address[11:3]) && speculative_queue_q[i].valid) begin
++            if ((page_offset_i[11:3] == temp_addresses_spec[(i * riscv::PLEN) + 11 : (i * riscv::PLEN) + 3]) && speculative_queue_q[(i * ENTRY_WIDTH) + riscv::PLEN + riscv::XLEN + (riscv::XLEN / 8) + 2]) begin
+                 page_offset_matches_o = 1'b1;
+                 break;
+             end
+diff --git a/core/store_unit.sv b/core/store_unit.sv
+index 27eb11aa..16d4b1df 100644
+--- a/core/store_unit.sv
++++ b/core/store_unit.sv
+@@ -32,7 +32,7 @@ module store_unit import ariane_pkg::*; #(
+     // store unit output port
+     output logic                     valid_o,
+     output logic [TRANS_ID_BITS-1:0] trans_id_o,
+-    output riscv::xlen_t             result_o,
++    output  logic [riscv::XLEN-1:0]              result_o,
+     output exception_t               ex_o,
+     // MMU -> Address Translation
+     output logic                     translation_req_o, // request address translation
+@@ -67,7 +67,7 @@ module store_unit import ariane_pkg::*; #(
+     logic instr_is_amo;
+     assign instr_is_amo = is_amo(lsu_ctrl_i.operation);
+     // keep the data and the byte enable for the second cycle (after address translation)
+-    riscv::xlen_t st_data_n, st_data_q;
++     logic [riscv::XLEN-1:0]  st_data_n, st_data_q;
+     logic [(riscv::XLEN/8)-1:0]   st_be_n,        st_be_q;
+     logic [1:0]   st_data_size_n, st_data_size_q;
+     amo_t         amo_op_d,       amo_op_q;
+diff --git a/corev_apu/tb/common/tb_readport.sv b/corev_apu/tb/common/tb_readport.sv
+index 51f4a6bf..61f552fb 100644
+--- a/corev_apu/tb/common/tb_readport.sv
++++ b/corev_apu/tb/common/tb_readport.sv
+@@ -47,7 +47,7 @@ program tb_readport  import tb_pkg::*; import ariane_pkg::*; #(
+   // expresp interface
+   output logic [63:0]   exp_paddr_o,
+   input  logic [1:0]    exp_size_i,
+-  input  riscv::xlen_t  exp_rdata_i,
++  input   logic [riscv::XLEN-1:0]   exp_rdata_i,
+   input  logic [63:0]   exp_paddr_i,
+   input  logic [63:0]   act_paddr_i,
+ 
+diff --git a/corev_apu/tb/tb_wt_axi_dcache/hdl/tb.sv b/corev_apu/tb/tb_wt_axi_dcache/hdl/tb.sv
+index 5044c181..6efdd898 100644
+--- a/corev_apu/tb/tb_wt_axi_dcache/hdl/tb.sv
++++ b/corev_apu/tb/tb_wt_axi_dcache/hdl/tb.sv
+@@ -115,7 +115,7 @@ module tb import ariane_pkg::*; import wt_cache_pkg::*; import tb_pkg::*; #()();
+   } reservation_t;
+ 
+   logic [63:0] act_paddr[1:0];
+-  riscv::xlen_t exp_rdata[1:0];
++   logic [riscv::XLEN-1:0]  exp_rdata[1:0];
+   logic [63:0] exp_paddr[1:0];
+   logic [63:0] amo_act_mem;
+   logic [63:0] amo_shadow;
+diff --git a/vendor/pulp-platform/common_cells/src/fifo_v3.sv b/vendor/pulp-platform/common_cells/src/fifo_v3.sv
+index 11b77e02..a75613f3 100644
+--- a/vendor/pulp-platform/common_cells/src/fifo_v3.sv
++++ b/vendor/pulp-platform/common_cells/src/fifo_v3.sv
+@@ -14,7 +14,7 @@ module fifo_v3 #(
+     parameter bit          FALL_THROUGH = 1'b0, // fifo is in fall-through mode
+     parameter int unsigned DATA_WIDTH   = 32,   // default data width if the fifo is of type logic
+     parameter int unsigned DEPTH        = 8,    // depth can be arbitrary from 0 to 2**32
+-    parameter type dtype                = logic [DATA_WIDTH-1:0],
++//    parameter type dtype                = logic [DATA_WIDTH-1:0],
+     // DO NOT OVERWRITE THIS PARAMETER
+     parameter int unsigned ADDR_DEPTH   = (DEPTH > 1) ? $clog2(DEPTH) : 1
+ )(
+@@ -27,10 +27,10 @@ module fifo_v3 #(
+     output logic  empty_o,          // queue is empty
+     output logic  [ADDR_DEPTH-1:0] usage_o,  // fill pointer
+     // as long as the queue is not full we can push new data
+-    input  dtype  data_i,           // data to push into the queue
++    input  logic [DATA_WIDTH-1:0]  data_i,           // data to push into the queue
+     input  logic  push_i,           // data is valid and can be pushed to the queue
+     // as long as the queue is not empty we can pop new elements
+-    output dtype  data_o,           // output data
++    output logic [DATA_WIDTH-1:0]  data_o,           // output data
+     input  logic  pop_i             // pop head from queue
+ );
+     // local parameter
+@@ -44,14 +44,14 @@ module fifo_v3 #(
+     // this integer will be truncated by the synthesis tool
+     logic [ADDR_DEPTH:0] status_cnt_n, status_cnt_q;
+     // actual memory
+-    dtype [FifoDepth - 1:0] mem_n, mem_q;
++    logic [(DATA_WIDTH * FifoDepth) - 1:0] mem_n, mem_q;
+ 
+     // fifo ram signals for fpga target
+     logic   fifo_ram_we;
+     logic   [ADDR_DEPTH-1:0] fifo_ram_read_address;
+     logic   [ADDR_DEPTH-1:0] fifo_ram_write_address;
+-    logic   [$bits(dtype)-1:0] fifo_ram_wdata;
+-    logic   [$bits(dtype)-1:0] fifo_ram_rdata;
++    logic   [DATA_WIDTH-1:0] fifo_ram_wdata;
++    logic   [DATA_WIDTH-1:0] fifo_ram_rdata;
+ 
+     assign usage_o = status_cnt_q[ADDR_DEPTH-1:0];
+ 
+@@ -77,7 +77,7 @@ module fifo_v3 #(
+              fifo_ram_wdata          = '0;
+              data_o = (DEPTH == 0) ? data_i : fifo_ram_rdata;
+         end else begin
+-            data_o          = (DEPTH == 0) ? data_i : mem_q[read_pointer_q];
++            data_o          = (DEPTH == 0) ? data_i : mem_q[(read_pointer_q * DATA_WIDTH) :+ DATA_WIDTH];
+             mem_n           = mem_q;
+             gate_clock      = 1'b1;
+         end
+@@ -90,7 +90,7 @@ module fifo_v3 #(
+                 fifo_ram_wdata = data_i;
+             end else begin
+                 // push the data onto the queue
+-                mem_n[write_pointer_q] = data_i;
++                mem_n[(write_pointer_q * DATA_WIDTH) :+ DATA_WIDTH] = data_i;
+                 // un-gate the clock, we want to write something
+                 gate_clock = 1'b0;
+             end
+@@ -153,7 +153,7 @@ module fifo_v3 #(
+         AsyncDpRam #(
+             .ADDR_WIDTH (ADDR_DEPTH),
+             .DATA_DEPTH (DEPTH),
+-            .DATA_WIDTH ($bits(dtype))
++            .DATA_WIDTH (DATA_WIDTH)
+         ) fifo_ram (
+             .Clk_CI      ( clk_i                   ),  
+             .WrEn_SI     ( fifo_ram_we             ),
+diff --git a/vendor/pulp-platform/common_cells/src/popcount.sv b/vendor/pulp-platform/common_cells/src/popcount.sv
+index 72b9b71f..b604884a 100644
+--- a/vendor/pulp-platform/common_cells/src/popcount.sv
++++ b/vendor/pulp-platform/common_cells/src/popcount.sv
+@@ -24,6 +24,21 @@ module popcount #(
+     output logic [PopcountWidth-1:0] popcount_o
+ );
+ 
++  logic [PopcountWidth-1:0] counter;
++  always_comb begin
++    counter = 0;
++    for(int k = 0; k < INPUT_WIDTH; k = k + 1) begin
++      if (data_i[k] == 1'b0) begin
++        counter = counter + 0;
++      end else begin
++        counter = counter + 1;
++      end
++    end
++  end
++
++  assign popcount_o = counter;
++
++/*
+    localparam int unsigned PaddedWidth = 1 << $clog2(INPUT_WIDTH);
+ 
+    logic [PaddedWidth-1:0]           padded_input;
+@@ -56,5 +71,5 @@ module popcount #(
+ 
+    //Output assignment
+    assign popcount_o = left_child_result + right_child_result;
+-
++*/
+ endmodule : popcount
+diff --git a/vendor/pulp-platform/common_cells/src/rr_arb_tree.sv b/vendor/pulp-platform/common_cells/src/rr_arb_tree.sv
+index 90301c82..9bcd61d1 100644
+--- a/vendor/pulp-platform/common_cells/src/rr_arb_tree.sv
++++ b/vendor/pulp-platform/common_cells/src/rr_arb_tree.sv
+@@ -296,8 +296,8 @@ module rr_arb_tree #(
+           assign sel =  ~req_nodes[Idx1] | req_nodes[Idx1+1] & rr_q[NumLevels-1-level];
+ 
+           assign index_nodes[Idx0] = (sel) ?
+-            idx_t'({1'b1, index_nodes[Idx1+1][NumLevels-unsigned'(level)-2:0]}) :
+-            idx_t'({1'b0, index_nodes[Idx1][NumLevels-unsigned'(level)-2:0]});
++            idx_t'({1'b1, {(NumLevels-unsigned'(level)-2){index_nodes[Idx1+1]}}}) :
++            idx_t'({1'b0, {(NumLevels-unsigned'(level)-2){index_nodes[Idx1]}}});
+ 
+           assign data_nodes[Idx0]  = (sel) ? data_nodes[Idx1+1] : data_nodes[Idx1];
+           assign gnt_nodes[Idx1]   = gnt_nodes[Idx0] & ~sel;
+diff --git a/vendor/pulp-platform/tech_cells_generic/src/rtl/tc_sram.sv b/vendor/pulp-platform/tech_cells_generic/src/rtl/tc_sram.sv
+index 2945fd46..db23724c 100644
+--- a/vendor/pulp-platform/tech_cells_generic/src/rtl/tc_sram.sv
++++ b/vendor/pulp-platform/tech_cells_generic/src/rtl/tc_sram.sv
+@@ -56,7 +56,7 @@ module tc_sram #(
+   parameter int unsigned ByteWidth    = 32'd8,    // Width of a data byte
+   parameter int unsigned NumPorts     = 32'd2,    // Number of read and write ports
+   parameter int unsigned Latency      = 32'd1,    // Latency when the read data is available
+-  parameter              SimInit      = "none",   // Simulation initialization
++  parameter              SimInit      = "zeros",   // Simulation initialization
+   parameter bit          PrintSimCfg  = 1'b0,     // Print configuration
+   // DEPENDENT PARAMETERS, DO NOT OVERWRITE!
+   parameter int unsigned AddrWidth = (NumWords > 32'd1) ? $clog2(NumWords) : 32'd1,
+@@ -78,6 +78,7 @@ module tc_sram #(
+ );
+ 
+   // memory array
++  (* nomem2reg *)
+   data_t sram [NumWords-1:0];
+   // hold the read address when no read access is made
+   addr_t [NumPorts-1:0] r_addr_q;
+@@ -86,12 +87,7 @@ module tc_sram #(
+   data_t init_val[NumWords-1:0];
+   initial begin : proc_sram_init
+     for (int unsigned i = 0; i < NumWords; i++) begin
+-      case (SimInit)
+-        "zeros":  init_val[i] = {DataWidth{1'b0}};
+-        "ones":   init_val[i] = {DataWidth{1'b1}};
+-        "random": init_val[i] = {DataWidth{$urandom()}};
+-        default:  init_val[i] = {DataWidth{1'bx}};
+-      endcase
++      init_val[i] = {DataWidth{1'b0}};
+     end
+   end
+ 
+@@ -101,7 +97,7 @@ module tc_sram #(
+   // array index 0.
+ 
+   // read data output assignment
+-  data_t [NumPorts-1:0][Latency-1:0] rdata_q,  rdata_d;
++  data_t [(NumPorts * Latency)-1:0] rdata_q,  rdata_d;
+   if (Latency == 32'd0) begin : gen_no_read_lat
+     for (genvar i = 0; i < NumPorts; i++) begin : gen_port
+       assign rdata_o[i] = (req_i[i] && !we_i[i]) ? sram[addr_i[i]] : sram[r_addr_q[i]];
+@@ -110,11 +106,11 @@ module tc_sram #(
+ 
+     always_comb begin
+       for (int unsigned i = 0; i < NumPorts; i++) begin
+-        rdata_o[i] = rdata_q[i][0];
++        rdata_o[i] = rdata_q[(i * Latency) + 0];
+         for (int unsigned j = 0; j < (Latency-1); j++) begin
+-          rdata_d[i][j] = rdata_q[i][j+1];
++          rdata_d[( i * Latency) + j] = rdata_q[(i * Latency) + j+1];
+         end
+-        rdata_d[i][Latency-1] = (req_i[i] && !we_i[i]) ? sram[addr_i[i]] : sram[r_addr_q[i]];
++        rdata_d[(i * Latency) + Latency-1] = (req_i[i] && !we_i[i]) ? sram[addr_i[i]] : sram[r_addr_q[i]];
+       end
+     end
+   end
+@@ -133,7 +129,7 @@ module tc_sram #(
+         for (int unsigned i = 0; i < NumPorts; i++) begin
+           if (Latency != 0) begin
+             for (int unsigned j = 0; j < Latency; j++) begin
+-              rdata_q[i][j] <= rdata_d[i][j];
++              rdata_q[(i * Latency) + j] <= rdata_d[(i * Latency) + j];
+             end
+           end
+         end
+@@ -149,7 +145,7 @@ module tc_sram #(
+               end
+             end else begin
+               // otherwise update read address for subsequent non request cycles
+-              r_addr_q[i] <= addr_i[i];
++              r_addr_q[(i * Latency) :+ Latency] <= addr_i[i];
+             end
+           end // if req_i
+         end // for ports
+@@ -161,11 +157,11 @@ module tc_sram #(
+       if (!rst_ni) begin
+         sram <= init_val;
+         for (int i = 0; i < NumPorts; i++) begin
+-          r_addr_q[i] <= {AddrWidth{1'b0}};
++          r_addr_q[(i * Latency) :+ Latency] <= {AddrWidth{1'b0}};
+           // initialize the read output register for each port
+           if (Latency != 32'd0) begin
+             for (int unsigned j = 0; j < Latency; j++) begin
+-              rdata_q[i][j] <= init_val[{AddrWidth{1'b0}}];
++              rdata_q[(i * Latency) + j] <= init_val[{AddrWidth{1'b0}}];
+             end
+           end
+         end
+@@ -174,7 +170,7 @@ module tc_sram #(
+         for (int unsigned i = 0; i < NumPorts; i++) begin
+           if (Latency != 0) begin
+             for (int unsigned j = 0; j < Latency; j++) begin
+-              rdata_q[i][j] <= rdata_d[i][j];
++              rdata_q[(i * Latency) + j] <= rdata_d[(i * Latency) + j];
+             end
+           end
+         end
+-- 
+2.34.1
+

@@ -12,6 +12,9 @@ public abstract class ISA {
      */
     private final TestCases testCases;
 
+    /**
+     * @param testCases The set of testcases.
+     */
     protected ISA(TestCases testCases) {
         this.testCases = testCases;
     }
@@ -31,8 +34,8 @@ public abstract class ISA {
     /**
      * Loads a deserialized contract from a file.
      *
-     * @param path          The path of the file containing the serialized contract candidate.
-     * @throws IOException  On filesystem errors.
+     * @param path The path of the file containing the serialized contract candidate.
+     * @throws IOException On filesystem errors.
      */
     public abstract void loadContract(Path path) throws IOException;
 }

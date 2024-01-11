@@ -13,19 +13,25 @@ public abstract class TestCase {
      * The program to be evaluated on core 2.
      */
     private final Program program2;
+    /**
+     * The maximum number of instructions that could execute.
+     */
     private final int maxInstructionCount;
 
     /**
      * A test result that would differentiate the two programs.
      */
     private final TestResult res;
+    /**
+     * The index of the test case.
+     */
     private final int index;
 
     /**
-     * @param program1              The program to be evaluated on core 1.
-     * @param program2              The program to be evaluated on core 2.
-     * @param maxInstructionCount   The number of instructions included in the programs.
-     * @param index                 The index used to identify the test case.
+     * @param program1            The program to be evaluated on core 1.
+     * @param program2            The program to be evaluated on core 2.
+     * @param maxInstructionCount The number of instructions included in the programs.
+     * @param index               The index used to identify the test case.
      */
     public TestCase(Program program1, Program program2, int maxInstructionCount, int index) {
         this.program1 = program1;
@@ -36,11 +42,11 @@ public abstract class TestCase {
     }
 
     /**
-     * @param program1              The program to be evaluated on core 1.
-     * @param program2              The program to be evaluated on core 2.
-     * @param maxInstructionCount   The number of instructions included in the programs.
-     * @param res                   A test result that would differentiate the two programs.
-     * @param index                 The index used to identify the test case.
+     * @param program1            The program to be evaluated on core 1.
+     * @param program2            The program to be evaluated on core 2.
+     * @param maxInstructionCount The number of instructions included in the programs.
+     * @param res                 A test result that would differentiate the two programs.
+     * @param index               The index used to identify the test case.
      */
     public TestCase(Program program1, Program program2, int maxInstructionCount, TestResult res, int index) {
         this.program1 = program1;

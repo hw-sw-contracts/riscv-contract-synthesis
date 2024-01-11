@@ -13,6 +13,9 @@ import java.nio.file.Path;
  */
 public class SimpleISA extends ISA {
 
+    /**
+     * The inferred contract
+     */
     private final SimpleContract contract;
 
     /**

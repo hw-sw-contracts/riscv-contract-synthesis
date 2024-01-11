@@ -123,7 +123,12 @@ module top (
         logic [3:0] mem_rmask_2;
         logic [3:0] mem_wmask_1;
         logic [3:0] mem_wmask_2;
+        logic [31:0] mem_addr_real_1;
+        logic [31:0] mem_addr_real_2;
+        logic [31:0] new_pc_1;
+        logic [31:0] new_pc_2;
     `endif
+
 
     instr_mem #(
         .ID                     (1),
@@ -237,7 +242,7 @@ module top (
         .rvfi_rd_addr(rd_1),
         .rvfi_rd_wdata(rd_wdata_1),
         .rvfi_pc_rdata(),
-        .rvfi_pc_wdata(),
+        .rvfi_pc_wdata(new_pc_1),
         .rvfi_mem_addr(mem_addr_1),
         .rvfi_mem_rmask(mem_rmask_1),
         .rvfi_mem_wmask(mem_wmask_1),
@@ -310,7 +315,7 @@ module top (
         .rvfi_rd_addr(rd_2),
         .rvfi_rd_wdata(rd_wdata_2),
         .rvfi_pc_rdata(),
-        .rvfi_pc_wdata(),
+        .rvfi_pc_wdata(new_pc_2),
         .rvfi_mem_addr(mem_addr_2),
         .rvfi_mem_rmask(mem_rmask_2),
         .rvfi_mem_wmask(mem_wmask_2),
@@ -352,6 +357,8 @@ assign mem_w_data_2 = {
             mem_wmask_2[0] ? mem_wdata_2[7:0] : 8'b0
             };
 
+    assign mem_addr_real_1 = (mem_rmask_1 == 0 && mem_wmask_1 == 0) ? 0 : mem_addr_1;
+    assign mem_addr_real_2 = (mem_rmask_2 == 0 && mem_wmask_2 == 0) ? 0 : mem_addr_2;
     ctr ctr (
         .clk_i                  (clock),
         .retire_i               (retire),
@@ -369,12 +376,18 @@ assign mem_w_data_2 = {
         .reg_rs2_2              (rs2_rdata_2),
         .reg_rd_1               (rd_wdata_1),
         .reg_rd_2               (rd_wdata_2),
-        .mem_addr_1             (mem_addr_1),
-        .mem_addr_2             (mem_addr_2),
+        .mem_addr_1             (mem_addr_real_1),
+        .mem_addr_2             (mem_addr_real_2),
         .mem_r_data_1           (mem_r_data_1),
         .mem_r_data_2           (mem_r_data_2),
+        .mem_r_mask_1           (mem_rmask_1),
+        .mem_r_mask_2           (mem_rmask_2),
         .mem_w_data_1           (mem_w_data_1),
         .mem_w_data_2           (mem_w_data_2),
+        .mem_w_mask_1           (mem_wmask_1),
+        .mem_w_mask_2           (mem_wmask_2),
+        .new_pc_1               (new_pc_1),
+        .new_pc_2               (new_pc_2),
         .ctr_equiv_o            (ctr_equiv),
     );
 

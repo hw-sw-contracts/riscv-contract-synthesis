@@ -29,8 +29,17 @@ import static contractgen.util.ScriptUtils.runScript;
  */
 public class SimpleMARCH extends MARCH {
 
+    /**
+     * The path where to find the sources
+     */
     private static final String TEMPLATE_PATH = "/home/yosys/resources/simple/";
+    /**
+     * The path where to modify the sources before compilation
+     */
     protected String BASE_PATH = "/home/yosys/output/simple/generated/";
+    /**
+     * Allow to define further arguments for the compilation scripts, e.g. pipeline
+     */
     protected String ADDITIONAL_DEFINITIONS = "";
 
     /**
@@ -38,7 +47,7 @@ public class SimpleMARCH extends MARCH {
      * @param testCases The test cases to be used for generation or evaluation.
      */
     public SimpleMARCH(Updater updater, TestCases testCases) {
-        super(new SimpleISA(updater, testCases));
+        super(new SimpleISA(updater, testCases), null); // TODO
     }
 
     @Override
@@ -76,6 +85,10 @@ public class SimpleMARCH extends MARCH {
         return runScript(BASE_PATH + "syn/verif.sh", false, 3600);
     }
 
+    /**
+     * @param steps The number of steps to be executed
+     * @param path  The path of the output directory
+     */
     private void generateCoverSBY(int steps, String path) {
         try {
             copyFileOrFolder(Path.of(TEMPLATE_PATH + "syn/verif.sh").toFile(), Path.of(BASE_PATH + "syn/verif.sh").toFile(), REPLACE_EXISTING);
@@ -114,6 +127,10 @@ public class SimpleMARCH extends MARCH {
         return false;
     }
 
+    /**
+     * @param steps The number of steps to be executed
+     * @param path  The path of the output directory
+     */
     protected void generateSBY(int steps, String path) {
         try {
             copyFileOrFolder(Path.of(TEMPLATE_PATH + "syn/verif.sh").toFile(), Path.of(BASE_PATH + "syn/verif.sh").toFile(), REPLACE_EXISTING);
@@ -195,12 +212,16 @@ public class SimpleMARCH extends MARCH {
         throw new UnsupportedOperationException("Not implemented");
     }
 
+    /**
+     * @param ctx The trace
+     * @return The instructions executed when the attacker was able to distinguish the executions
+     */
     private Pair<Pair<Instruction, Integer>, Pair<Instruction, Integer>> findInstructionsSequential(VcdFile ctx) {
         Integer violation = ctx.getTop().getWire("atk_equiv").getLastChangeTime();
         System.out.println("Violation at " + violation);
         Integer fetch_1 = ctx.getTop().getChild("control").getWire("fetch_1_count").getLastChangeBeforeTime(violation);
         Integer fetch_2 = ctx.getTop().getChild("control").getWire("fetch_2_count").getLastChangeBeforeTime(violation);
-        System.out.println("Fetch of instructions at " + fetch_1 +" and " + fetch_2);
+        System.out.println("Fetch of instructions at " + fetch_1 + " and " + fetch_2);
         String instr_1_b = ctx.getTop().getWire("instr_1").getValueAt(fetch_1);
         System.out.println("Instr 1: " + instr_1_b);
         Instruction instr_1 = SimpleInstruction.parseBinaryString(instr_1_b);
@@ -212,6 +233,13 @@ public class SimpleMARCH extends MARCH {
         return new Pair<>(new Pair<>(instr_1, fetch_1), new Pair<>(instr_2, fetch_2));
     }
 
+    /**
+     * @param ctx      The trace
+     * @param i        Whether to analyze execution one or two
+     * @param register The register id
+     * @param time     The time
+     * @return The value of the register
+     */
     protected String getRegisterValue(VcdFile ctx, int i, Integer register, Integer time) {
         if (i != 1 && i != 2)
             throw new IllegalArgumentException();

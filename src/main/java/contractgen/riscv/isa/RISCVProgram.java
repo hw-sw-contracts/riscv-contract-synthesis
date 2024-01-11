@@ -13,12 +13,19 @@ import java.util.Map;
  */
 public class RISCVProgram implements Program {
 
+    /**
+     * The number of architectural registers.
+     */
     private static final int NUMBER_REGISTERS = 32;
+    /**
+     * The initial value of each register.
+     */
     private final Map<Integer, Integer> registers;
 
+    /**
+     * The sequence of instructions
+     */
     private final List<RISCVInstruction> program;
-
-    private static final List<RISCV_TYPE> loads = List.of(RISCV_TYPE.LB, RISCV_TYPE.LBU, RISCV_TYPE.LH, RISCV_TYPE.LHU, RISCV_TYPE.LW);
 
     /**
      * @param registers The initial register values.
@@ -65,7 +72,7 @@ public class RISCVProgram implements Program {
     @Override
     public void printInstr(String path) {
         StringBuilder sb = new StringBuilder();
-        for (RISCVInstruction instruction: program) {
+        for (RISCVInstruction instruction : program) {
             sb.append(instruction.toHexEncoding());
             sb.append("\n");
         }

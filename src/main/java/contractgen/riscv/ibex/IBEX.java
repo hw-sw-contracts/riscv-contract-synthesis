@@ -2,26 +2,15 @@ package contractgen.riscv.ibex;
 
 import contractgen.*;
 import contractgen.riscv.isa.RISCV;
-import contractgen.riscv.isa.RISCVInstruction;
-import contractgen.riscv.isa.RISCV_TYPE;
-import contractgen.riscv.isa.contract.RISCVTestResult;
-import contractgen.riscv.isa.contract.RISCVObservation;
-import contractgen.riscv.isa.contract.RISCV_OBSERVATION_TYPE;
+import contractgen.riscv.isa.extractor.RVFIExtractor;
 import contractgen.util.Pair;
 import contractgen.util.StringUtils;
-import contractgen.util.vcd.Module;
 import contractgen.util.vcd.VcdFile;
-import contractgen.util.vcd.Wire;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.HashSet;
-import java.util.Objects;
-import java.util.Set;
 
 import static contractgen.util.FileUtils.copyFileOrFolder;
 import static contractgen.util.FileUtils.replaceString;
@@ -34,9 +23,21 @@ import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 public class
 IBEX extends MARCH {
 
+    /**
+     * The path where to find the template.
+     */
     private static final String TEMPLATE_PATH = "/home/yosys/resources/ibex/";
+    /**
+     * The path where to store the instantiated template.
+     */
     protected String BASE_PATH = "/home/yosys/output/ibex/generated/";
+    /**
+     * The path where the compiled module is to be stored.
+     */
     protected String COMPILATION_PATH = "/home/yosys/output/ibex/compiled/";
+    /**
+     * The path where simulation takes place.
+     */
     protected String SIMULATION_PATH = "/home/yosys/output/ibex/simulation/";
 
     /**
@@ -44,7 +45,7 @@ IBEX extends MARCH {
      * @param testCases The test cases to be used for generation or evaluation.
      */
     public IBEX(Updater updater, TestCases testCases) {
-        super(new RISCV(updater, testCases));
+        super(new RISCV(updater, testCases), new RVFIExtractor());
     }
 
     @Override
@@ -77,6 +78,11 @@ IBEX extends MARCH {
         return extractCTX(SIMULATION_PATH + id + "/", testCase);
     }
 
+    /**
+     * @param PATH     The path of the simulation.
+     * @param testCase The simulated testcase.
+     * @return A set of two test results
+     */
     private Pair<TestResult, TestResult> extractCTX(String PATH, TestCase testCase) {
         VcdFile vcd;
         try {
@@ -106,101 +112,14 @@ IBEX extends MARCH {
         return extractDifferences(SIMULATION_PATH + id + "/", false, index);
     }
 
+    /**
+     * @param PATH                     The path of the vcd file.
+     * @param adversaryDistinguishable whether the simulation was distinguishable by an adversary.
+     * @param index                    the index of the testcase for further reference.
+     * @return The differences that would allow a contract to distinguish the two executions.
+     */
     private Pair<TestResult, TestResult> extractDifferences(String PATH, boolean adversaryDistinguishable, int index) {
-        VcdFile vcd;
-        try {
-            vcd = new VcdFile(Files.readString(Path.of(PATH + "sim.vcd")));
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-        Set<RISCVObservation> obs1 = new HashSet<>();
-        Set<RISCVObservation> obs2 = new HashSet<>();
-        Wire retire_count = vcd.getTop().getChild("control").getWire("retire_count");
-        Wire fetch_1_count = vcd.getTop().getChild("control").getWire("fetch_1_count");
-        Wire fetch_2_count = vcd.getTop().getChild("control").getWire("fetch_2_count");
-        assert fetch_1_count != null;
-        assert fetch_2_count != null;
-        int currentGuess = Integer.parseInt(retire_count.getValueAt(retire_count.getLastChangeTime()), 2);
-        while (currentGuess > 0) {
-            Integer retire_time = retire_count.getFirstTimeValue(StringUtils.toBinaryEncoding((long) currentGuess));
-            RISCVInstruction instr_1;
-            RISCVInstruction instr_2;
-            try {
-                instr_1 = RISCVInstruction.parseBinaryString(vcd.getTop().getChild("ctr").getWire("instr_1_i").getValueAt(retire_time));
-                instr_2 = RISCVInstruction.parseBinaryString(vcd.getTop().getChild("ctr").getWire("instr_2_i").getValueAt(retire_time));
-            } catch (Exception e) {
-                // Might be an unaligned jump -> invalid instruction
-                currentGuess--;
-                continue;
-            }
-
-            Module ctr = vcd.getTop().getChild("ctr");
-            String reg_rs1_1 = ctr.getWire("reg_rs1_1").getValueAt(retire_time);
-            String reg_rs1_2 = ctr.getWire("reg_rs1_2").getValueAt(retire_time);
-            String reg_rs2_1 = ctr.getWire("reg_rs2_1").getValueAt(retire_time);
-            String reg_rs2_2 = ctr.getWire("reg_rs2_2").getValueAt(retire_time);
-            String reg_rd_1 = ctr.getWire("reg_rd_1").getValueAt(retire_time);
-            String reg_rd_2 = ctr.getWire("reg_rd_2").getValueAt(retire_time);
-
-            String mem_addr_1 = ctr.getWire("mem_addr_1").getValueAt(retire_time);
-            String mem_addr_2 = ctr.getWire("mem_addr_2").getValueAt(retire_time);
-            String mem_r_data_1 = ctr.getWire("mem_r_data_1").getValueAt(retire_time);
-            String mem_r_data_2 = ctr.getWire("mem_r_data_2").getValueAt(retire_time);
-            String mem_w_data_1 = ctr.getWire("mem_w_data_1").getValueAt(retire_time);
-            String mem_w_data_2 = ctr.getWire("mem_w_data_2").getValueAt(retire_time);
-
-
-            if (!Objects.equals(instr_1.type(), instr_2.type())) {
-                obs1.add(new RISCVObservation(instr_1.type(), RISCV_OBSERVATION_TYPE.OPCODE));
-                obs2.add(new RISCVObservation(instr_2.type(), RISCV_OBSERVATION_TYPE.OPCODE));
-            }
-
-            if (!Objects.equals(instr_1.rd(), instr_2.rd())) {
-                obs1.add(new RISCVObservation(instr_1.type(), RISCV_OBSERVATION_TYPE.RD));
-                obs2.add(new RISCVObservation(instr_2.type(), RISCV_OBSERVATION_TYPE.RD));
-            }
-            if (!Objects.equals(instr_1.rs1(), instr_2.rs1())) {
-                obs1.add(new RISCVObservation(instr_1.type(), RISCV_OBSERVATION_TYPE.RS1));
-                obs2.add(new RISCVObservation(instr_2.type(), RISCV_OBSERVATION_TYPE.RS1));
-            }
-            if (!Objects.equals(instr_1.rs2(), instr_2.rs2())) {
-                obs1.add(new RISCVObservation(instr_1.type(), RISCV_OBSERVATION_TYPE.RS2));
-                obs2.add(new RISCVObservation(instr_2.type(), RISCV_OBSERVATION_TYPE.RS2));
-            }
-            if (!Objects.equals(instr_1.imm(), instr_2.imm())) {
-                obs1.add(new RISCVObservation(instr_1.type(), RISCV_OBSERVATION_TYPE.IMM));
-                obs2.add(new RISCVObservation(instr_2.type(), RISCV_OBSERVATION_TYPE.IMM));
-            }
-            if (!Objects.equals(reg_rs1_1, reg_rs1_2)) {
-                obs1.add(new RISCVObservation(instr_1.type(), RISCV_OBSERVATION_TYPE.REG_RS1));
-                obs2.add(new RISCVObservation(instr_2.type(), RISCV_OBSERVATION_TYPE.REG_RS1));
-            }
-            if (!Objects.equals(reg_rs2_1, reg_rs2_2)) {
-                obs1.add(new RISCVObservation(instr_1.type(), RISCV_OBSERVATION_TYPE.REG_RS2));
-                obs2.add(new RISCVObservation(instr_2.type(), RISCV_OBSERVATION_TYPE.REG_RS2));
-            }
-            if (!Objects.equals(reg_rd_1, reg_rd_2)) {
-                obs1.add(new RISCVObservation(instr_1.type(), RISCV_OBSERVATION_TYPE.REG_RD));
-                obs2.add(new RISCVObservation(instr_2.type(), RISCV_OBSERVATION_TYPE.REG_RD));
-            }
-
-            if (!Objects.equals(mem_addr_1, mem_addr_2)) {
-                obs1.add(new RISCVObservation(instr_1.type(), RISCV_OBSERVATION_TYPE.MEM_ADDR));
-                obs2.add(new RISCVObservation(instr_2.type(), RISCV_OBSERVATION_TYPE.MEM_ADDR));
-            }
-            if (!Objects.equals(mem_r_data_1, mem_r_data_2)) {
-                obs1.add(new RISCVObservation(instr_1.type(), RISCV_OBSERVATION_TYPE.MEM_R_DATA));
-                obs2.add(new RISCVObservation(instr_2.type(), RISCV_OBSERVATION_TYPE.MEM_R_DATA));
-            }
-            if (!Objects.equals(mem_w_data_1, mem_w_data_2)) {
-                obs1.add(new RISCVObservation(instr_1.type(), RISCV_OBSERVATION_TYPE.MEM_W_DATA));
-                obs2.add(new RISCVObservation(instr_2.type(), RISCV_OBSERVATION_TYPE.MEM_W_DATA));
-            }
-
-            currentGuess--;
-        }
-
-        return new Pair<>(new RISCVTestResult(obs1, adversaryDistinguishable, index * 2), new RISCVTestResult(obs2, adversaryDistinguishable, (index * 2) + 1));
+        return getExtractor().extractResults(PATH, adversaryDistinguishable, index);
     }
 
     @Override
@@ -228,6 +147,10 @@ IBEX extends MARCH {
         writeTestCase(SIMULATION_PATH + id + "/", testCase);
     }
 
+    /**
+     * @param PATH     the path to which the test case should be written.
+     * @param testCase The test case to be written to disk.
+     */
     private void writeTestCase(String PATH, TestCase testCase) {
         try {
             copyFileOrFolder(Path.of(COMPILATION_PATH + "ibex").toFile(), Path.of(PATH + "ibex").toFile(), REPLACE_EXISTING);
@@ -239,7 +162,7 @@ IBEX extends MARCH {
         testCase.getProgram2().printInit(PATH + "init_2.dat");
         testCase.getProgram2().printInstr(PATH + "memory_2.dat");
         try {
-            Files.write( Paths.get(PATH + "count.dat"), StringUtils.toHexEncoding((long) (testCase.getMaxInstructionCount() + 31)).getBytes());
+            Files.write(Paths.get(PATH + "count.dat"), StringUtils.toHexEncoding((long) (testCase.getMaxInstructionCount() + 31)).getBytes());
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -260,6 +183,10 @@ IBEX extends MARCH {
         return "ibex";
     }
 
+    /**
+     * @param PATH The simulation path.
+     * @return The result of the simulation.
+     */
     private SIMULATION_RESULT simulate(String PATH) {
         String output = runScript(PATH + "ibex", true, 30);
         assert output != null;
@@ -274,6 +201,11 @@ IBEX extends MARCH {
         return SIMULATION_RESULT.UNKNOWN;
     }
 
+    /**
+     * @param PATH  The simulation path.
+     * @param steps The number of steps to be simulated.
+     * @return The result of the simulation.
+     */
     private SIMULATION_RESULT simulateSteps(String PATH, int steps) {
         try {
             Files.write(Paths.get(PATH + "count.dat"), StringUtils.toHexEncoding((long) steps).getBytes());

@@ -16,6 +16,9 @@ import java.util.Set;
  */
 public class RISCV extends ISA {
 
+    /**
+     * The contract object.
+     */
     private RISCVContract contract;
 
     /**
