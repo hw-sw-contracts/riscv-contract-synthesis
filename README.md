@@ -1,8 +1,8 @@
 # Hardware-Software Leakage Contract Synthesis Toolchain
 
-[![DOI](https://img.shields.io/badge/DOI-10.5281/zenodo.10491534-blue.svg?style=for-the-badge)](https://doi.org/10.5281/zenodo.10491534)
-
 [![arXiv](https://img.shields.io/badge/arXiv-2401.09383-b31b1b.svg?style=for-the-badge)](https://arxiv.org/abs/2401.09383)
+[![Zenodo](https://img.shields.io/badge/Zenodo-10.5281/zenodo.10491534-blue.svg?style=for-the-badge)](https://doi.org/10.5281/zenodo.10491534)
+[![YouTube](https://img.shields.io/badge/YouTube-ff0000.svg?style=for-the-badge&logo=youtube)](https://youtu.be/12GmWUNCiIs)
 
 ## Background
 
